@@ -4,9 +4,9 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
 from PyQt6.QtCore import Qt, QObject  
 from typing import Dict, Any, Optional  
   
-from VideoDataController import VideoDataController  
 from ControlPanelBuilder import ControlPanelBuilder  
 from TimelineDisplayManager import TimelineDisplayManager  
+from EditWidgetManager import EditWidgetManager
   
 class LayoutOrchestrator(QObject):  
     """メインレイアウトの構築を担当するクラス"""  
@@ -27,20 +27,21 @@ class LayoutOrchestrator(QObject):
         self.ui_components: Dict[str, Any] = {}  
       
     def create_main_layout(self, video_widget, controls_layout,   
-                          timeline_display_manager: TimelineDisplayManager) -> QSplitter:  
+                        timeline_display_manager: TimelineDisplayManager,  
+                        edit_widget_manager: EditWidgetManager) -> QSplitter:  
         """メインレイアウトを構築"""  
         # 左パネルを作成  
         self.left_panel = self.organize_left_panel(  
             video_widget, controls_layout, timeline_display_manager  
         )  
-          
-        # 右パネルを作成  
-        self.right_panel, ui_components = self.organize_right_panel()  
+        
+        # 右パネルを作成（EditWidgetManagerを含む）  
+        self.right_panel, ui_components = self.organize_right_panel(edit_widget_manager)  
         self.ui_components.update(ui_components)  
-          
+        
         # メインスプリッターを作成  
         self.main_splitter = self.manage_main_splitter(self.left_panel, self.right_panel)  
-          
+        
         return self.main_splitter  
       
     def organize_left_panel(self, video_widget, controls_layout,   
@@ -71,9 +72,20 @@ class LayoutOrchestrator(QObject):
           
         return vertical_splitter  
       
-    def organize_right_panel(self) -> tuple[QWidget, Dict[str, Any]]:  
+    def organize_right_panel(self, edit_widget_manager: EditWidgetManager) -> tuple[QWidget, Dict[str, Any]]:  
         """右パネルの構成を管理"""  
-        return self.control_panel_builder.create_control_panel()  
+        right_panel = QWidget()  
+        layout = QVBoxLayout()  
+        
+        # コントロールパネルを作成  
+        control_panel, ui_components = self.control_panel_builder.create_control_panel()  
+        layout.addWidget(control_panel)  
+        
+        # EditWidgetManagerを追加  
+        layout.addWidget(edit_widget_manager)  
+        
+        right_panel.setLayout(layout)  
+        return right_panel, ui_components
       
     def manage_main_splitter(self, left_panel: QWidget, right_panel: QWidget) -> QSplitter:  
         """メインスプリッターの管理"""  

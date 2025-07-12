@@ -6,7 +6,6 @@ from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Optional  
   
 from EditCommandFactory import EditCommandFactory  
-from TimelineViewer import TimelineViewer  
   
 class StepEditor(QWidget):  
     """ステップ編集に特化したエディタークラス"""  
@@ -225,19 +224,24 @@ class StepEditor(QWidget):
       
     def on_step_value_changed(self):  
         """Step値が変更された時の即時処理"""  
+        print("on_step_value_changed called")  # デバッグ用  
+        
         # 連続入力を防ぐため遅延処理  
         if self._step_timer and self._step_timer.isActive():  
             self._step_timer.stop()  
-          
+        
         self._step_timer = QTimer()  
         self._step_timer.setSingleShot(True)  
         self._step_timer.timeout.connect(self.apply_step_changes)  
         self._step_timer.start(500)  # 500ms後に適用  
+        print("Timer started")  # デバッグ用   
       
     def apply_step_changes(self):  
         """ステップ変更を適用"""  
+        print("apply_step_changes called")  # デバッグ用
         current_item = self.step_list.currentItem()  
         if not current_item or not self.stt_data_manager or not self.current_video_name or not self.command_factory:  
+            print("Early return due to missing conditions")  # デバッグ用 
             return  
           
         index = current_item.data(1)  
@@ -265,54 +269,65 @@ class StepEditor(QWidget):
             )  
           
         if segment_changed:  
-            # 該当するDetectionIntervalを見つける必要がある  
+            # ApplicationCoordinator経由でセグメント変更を適用  
             self._apply_segment_changes(old_segment, new_segment, old_text)  
           
         # UIを即座に更新  
         self.refresh_step_list()  
-        self._restore_step_selection(new_text, index)  
-          
+        self._restore_step_selection(new_text if text_changed else old_text, index)  
+        self._update_step_edit_ui()  # この行を追加  
+        
         # シグナル発信  
         self.stepModified.emit()  
-        self.dataChanged.emit()  
+        self.dataChanged.emit() 
       
     def _apply_segment_changes(self, old_segment: list, new_segment: list, step_text: str):  
         """セグメント変更をタイムラインに適用"""  
-        if not self.main_window or not hasattr(self.main_window, 'multi_timeline_viewer') or not self.command_factory:  
+        if not self.main_window or not hasattr(self.main_window, 'application_coordinator'):  
             return  
           
-        # Stepsタイムラインから該当するintervalを見つける  
-        for timeline_widget in self.main_window.multi_timeline_viewer.timeline_widgets:  
-            timeline = timeline_widget.findChild(TimelineViewer)  
-            if timeline:  
-                for interval in timeline.intervals:  
-                    if hasattr(interval, 'label') and interval.label == step_text:  
-                        command = self.command_factory.create_step_modify_command(  
-                            interval,   
-                            old_segment[0],   
-                            old_segment[1],  
-                            new_segment[0],   
-                            new_segment[1],  
-                            self.stt_data_manager,   
-                            self.current_video_name  
-                        )  
-                        self.command_factory.execute_command(command)  
-                        break  
-      
+        # ApplicationCoordinator経由でステップセグメント更新を処理  
+        coordinator = self.main_window.application_coordinator  
+        if coordinator and hasattr(coordinator, 'handle_step_segment_update'):  
+            coordinator.handle_step_segment_update(step_text, old_segment, new_segment)  
+        else:  
+            # フォールバック: synchronize_step_updatesを呼び出し  
+            if coordinator:  
+                coordinator.synchronize_step_updates()  
+
+    def _update_step_edit_ui(self):  
+        """Step編集UIの現在選択項目を更新"""  
+        current_item = self.step_list.currentItem()  
+        if current_item and self.stt_data_manager and self.current_video_name:  
+            index = current_item.data(1)  
+            if index < len(self.stt_data_manager.stt_dataset.database[self.current_video_name].steps):  
+                step = self.stt_data_manager.stt_dataset.database[self.current_video_name].steps[index]  
+                
+                # シグナルを一時的に無効化  
+                self._block_signals(True)  
+                try:  
+                    self.step_edit_text.setText(step.step)  
+                    if len(step.segment) >= 2:  
+                        self.step_start_spin.setValue(step.segment[0])  
+                        self.step_end_spin.setValue(step.segment[1])  
+                finally:  
+                    # シグナルを再有効化  
+                    self._block_signals(False)
+
     def _restore_step_selection(self, step_text: str, original_index: int):  
         """ステップの選択状態を復元"""  
         # 更新されたステップテキストまたは元のインデックスで検索  
         for i in range(self.step_list.count()):  
             item = self.step_list.item(i)  
             item_index = item.data(1)  
-              
+            
             # インデックスが一致するか、テキストが一致する場合に選択  
             if item_index == original_index or item.text() == step_text:  
                 self.step_list.setCurrentItem(item)  
                 item.setSelected(True)  
                 self.step_list.scrollToItem(item, QListWidget.ScrollHint.PositionAtCenter)  
-                self.on_step_selected(item)  
-                break  
+                # on_step_selectedは呼び出さない（_update_step_edit_uiで処理）  
+                break
       
     def delete_step(self):  
         """ステップを削除"""  

@@ -62,7 +62,7 @@ class MainApplicationWindow(QMainWindow):
           
         # LayoutOrchestratorを使用してメインレイアウトを作成  
         main_splitter = self.layout_orchestrator.create_main_layout(  
-            video_widget, controls_layout, self.timeline_display_manager  
+            video_widget, controls_layout, self.timeline_display_manager, self.edit_widget_manager  
         )  
           
         # UI要素を取得  
@@ -86,7 +86,15 @@ class MainApplicationWindow(QMainWindow):
           
         # メインレイアウトを設定  
         self.setCentralWidget(main_splitter)  
-      
+
+        # EditWidgetManagerが正しく初期化されているか確認  
+        print(f"EditWidgetManager initialized: {self.edit_widget_manager is not None}")  
+        print(f"Tab widget created: {self.edit_widget_manager.tab_widget is not None}")  
+        print(f"Tab count: {self.edit_widget_manager.tab_widget.count()}")  
+        
+        # レイアウトに含まれているか確認  
+        print(f"Main splitter children: {main_splitter.count()}")
+
     def setup_connections(self):  
         """シグナル・スロット接続の設定"""  
         # ApplicationCoordinatorのシグナル接続  

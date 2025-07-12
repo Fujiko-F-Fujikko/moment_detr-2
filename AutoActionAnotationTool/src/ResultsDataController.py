@@ -104,18 +104,19 @@ class ResultsDataController(QObject):
                 interval for interval in result.relevant_windows  
                 if interval.confidence_score >= threshold  
             ]  
-              
+            
             if filtered_intervals:  
-                # 新しいQueryResultsオブジェクトを作成  
+                # 新しいQueryResultsオブジェクトを作成（video_idを追加）  
                 filtered_result = QueryResults(  
-                    query_id=result.query_id,  
                     query_text=result.query_text,  
+                    video_id=result.video_id,  # この行を追加  
                     relevant_windows=filtered_intervals,  
-                    saliency_scores=result.saliency_scores  
+                    saliency_scores=result.saliency_scores,  
+                    query_id=result.query_id  
                 )  
                 filtered_results.append(filtered_result)  
-          
-        return filtered_results  
+        
+        return filtered_results 
       
     def group_results_by_hand_type(self, results: Optional[List[QueryResults]] = None) -> Dict[str, List[QueryResults]]:  
         """結果をHand Type毎にグループ化"""  
