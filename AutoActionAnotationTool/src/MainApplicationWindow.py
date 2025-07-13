@@ -59,41 +59,37 @@ class MainApplicationWindow(QMainWindow):
         # 動画ウィジェットとコントロールを取得  
         video_widget = self.video_controller.get_video_widget()  
         controls_layout = self.video_controller.get_controls_layout()  
-          
+        
         # LayoutOrchestratorを使用してメインレイアウトを作成  
         main_splitter = self.layout_orchestrator.create_main_layout(  
             video_widget, controls_layout, self.timeline_display_manager, self.edit_widget_manager  
         )  
-          
+        
         # UI要素を取得  
         ui_components = self.layout_orchestrator.get_ui_components()  
-          
-        # 結果表示管理を設定  
+        
+        # 結果表示管理を設定（修正版）  
         results_controller = self.application_coordinator.get_results_data_controller()  
-        if 'results_list' in ui_components:  
+        if 'results_list' in ui_components and ui_components['results_list'] is not None:  
             from ResultsDisplayManager import ResultsDisplayManager  
             self.results_display_manager = ResultsDisplayManager(results_controller)  
             self.results_display_manager.set_ui_components(ui_components['results_list'])  
-            self.results_display_manager.intervalSelected.connect(self.on_interval_selected)  
-          
+            #self.results_display_manager.intervalSelected.connect(self.on_interval_selected)  
+            print("DEBUG: Signal connection established")  
+        else:  
+            print("DEBUG: results_list not found, signal not connected")  
+            print(f"DEBUG: Available UI components: {list(ui_components.keys())}")  
+        
         # フィルタコントロールの設定  
         if 'confidence_slider' in ui_components:  
             self.confidence_slider = ui_components['confidence_slider']  
             self.confidence_value_label = ui_components['confidence_value_label']  
-          
+        
         if 'hand_type_combo' in ui_components:  
             self.hand_type_combo = ui_components['hand_type_combo']  
-          
+        
         # メインレイアウトを設定  
         self.setCentralWidget(main_splitter)  
-
-        # EditWidgetManagerが正しく初期化されているか確認  
-        print(f"EditWidgetManager initialized: {self.edit_widget_manager is not None}")  
-        print(f"Tab widget created: {self.edit_widget_manager.tab_widget is not None}")  
-        print(f"Tab count: {self.edit_widget_manager.tab_widget.count()}")  
-        
-        # レイアウトに含まれているか確認  
-        print(f"Main splitter children: {main_splitter.count()}")
 
     def setup_connections(self):  
         """シグナル・スロット接続の設定"""  
@@ -101,7 +97,7 @@ class MainApplicationWindow(QMainWindow):
         self.application_coordinator.videoLoaded.connect(self.on_video_loaded)  
         self.application_coordinator.resultsLoaded.connect(self.on_results_loaded)  
         self.application_coordinator.dataChanged.connect(self.on_data_changed)  
-        self.application_coordinator.intervalSelected.connect(self.on_interval_selected)  
+        #self.application_coordinator.intervalSelected.connect(self.on_interval_selected)  
           
         # 動画プレイヤーコントローラーの接続  
         self.video_controller.positionChanged.connect(self.on_video_position_changed)  
@@ -192,6 +188,20 @@ class MainApplicationWindow(QMainWindow):
         step_tab_shortcut = QShortcut(QKeySequence("Ctrl+2"), self)  
         step_tab_shortcut.activated.connect(lambda: self.edit_widget_manager.set_current_tab_index(1))  
       
+    def update_display(self):  
+        """表示を更新（コマンドクラスから呼び出される）"""  
+        # ApplicationCoordinatorを通じて同期  
+        if hasattr(self, 'application_coordinator'):  
+            self.application_coordinator.synchronize_components()  
+          
+        # EditWidgetManagerの更新  
+        if hasattr(self, 'edit_widget_manager'):  
+            self.edit_widget_manager.update_display()  
+          
+        # TimelineDisplayManagerの更新  
+        if hasattr(self, 'timeline_display_manager'):  
+            self.timeline_display_manager.update_all_timelines()
+
     # イベントハンドラー（ApplicationCoordinatorに委譲）  
     def on_video_loaded(self, video_path: str):  
         """動画読み込み完了時の処理"""  
@@ -199,17 +209,20 @@ class MainApplicationWindow(QMainWindow):
       
     def on_results_loaded(self, results):  
         """結果読み込み完了時の処理"""  
-        print(f"Results loaded: {len(results)} queries")  
-      
+        print(f"DEBUG: Results loaded: {len(results)} results")  
+        if hasattr(self, 'results_display_manager') and self.results_display_manager:  
+            self.results_display_manager.force_refresh()
+
     def on_data_changed(self):  
         """データ変更時の処理"""  
         # ApplicationCoordinatorに委譲  
         self.application_coordinator.synchronize_components()  
       
-    def on_interval_selected(self, interval, index: int):  
-        """区間選択時の処理"""  
-        # ApplicationCoordinatorに委譲  
-        self.application_coordinator.handle_timeline_interval_clicked(interval, getattr(interval, 'query_result', None))  
+    def on_interval_selected(self, query_result):  
+        """ControlPanelBuilderからの結果アイテムクリック処理"""  
+        if query_result and hasattr(query_result, 'relevant_windows') and query_result.relevant_windows:  
+            first_interval = query_result.relevant_windows[0]  
+            self.application_coordinator.handle_timeline_interval_clicked(first_interval, query_result)
       
     def on_video_position_changed(self, position: int):  
         """動画位置変更時の処理"""  

@@ -1,3 +1,4 @@
+# IntervalEditCommand.py (修正版)  
 from PyQt6.QtGui import QUndoCommand  
   
 class IntervalEditCommand(QUndoCommand):  
@@ -23,11 +24,16 @@ class IntervalEditCommand(QUndoCommand):
     def _update_ui(self):  
         if self.main_window:  
             self.main_window.update_display()  
-
-        # IntegratedEditWidgetのUIも更新  
-        if hasattr(self.main_window, 'integrated_edit_widget'):  
-            self.main_window.integrated_edit_widget.update_interval_ui()  
-
+  
+        # 新しいアーキテクチャではEditWidgetManagerを使用  
+        if hasattr(self.main_window, 'edit_widget_manager'):  
+            # ActionEditorのUIを更新  
+            action_editor = self.main_window.edit_widget_manager.get_action_editor()  
+            action_editor.update_interval_ui()  
+              
+            # 全体のUIも更新  
+            self.main_window.edit_widget_manager.refresh_ui()  
+  
 class IntervalDeleteCommand(QUndoCommand):  
     def __init__(self, query_result, interval, index, main_window, description="Delete Interval"):  
         super().__init__(description)  
@@ -48,6 +54,10 @@ class IntervalDeleteCommand(QUndoCommand):
     def _update_ui(self):  
         if self.main_window:  
             self.main_window.update_display()  
+              
+        # 新しいアーキテクチャではEditWidgetManagerを使用  
+        if hasattr(self.main_window, 'edit_widget_manager'):  
+            self.main_window.edit_widget_manager.refresh_ui()  
   
 class IntervalAddCommand(QUndoCommand):  
     def __init__(self, query_result, interval, main_window, description="Add Interval"):  
@@ -68,4 +78,7 @@ class IntervalAddCommand(QUndoCommand):
     def _update_ui(self):  
         if self.main_window:  
             self.main_window.update_display()  
-  
+              
+        # 新しいアーキテクチャではEditWidgetManagerを使用  
+        if hasattr(self.main_window, 'edit_widget_manager'):  
+            self.main_window.edit_widget_manager.refresh_ui()

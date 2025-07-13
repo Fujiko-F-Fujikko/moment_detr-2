@@ -1,4 +1,4 @@
-# StepModifyCommand.py (拡張版)  
+# StepEditCommand.py (修正版)  
 from PyQt6.QtGui import QUndoCommand  
   
 class StepEditCommand(QUndoCommand):  
@@ -42,17 +42,20 @@ class StepEditCommand(QUndoCommand):
         if self.main_window:      
             # 新しいアーキテクチャではApplicationCoordinatorに委譲  
             self.main_window.on_data_changed()  
-            
+              
             if hasattr(self.main_window, 'edit_widget_manager'):      
                 # StepEditorのUIを更新  
-                step_editor = self.main_window.edit_widget_manager.step_editor  
+                step_editor = self.main_window.edit_widget_manager.get_step_editor()  
                 step_editor.refresh_step_list()  
-                
+                  
                 # 選択状態を復元  
                 step_editor._restore_step_selection(  
                     self.interval.label, None  
                 )  
-                
+                  
+                # 全体のUIも更新  
+                self.main_window.edit_widget_manager.refresh_ui()  
+  
 class StepAddCommand(QUndoCommand):  
     def __init__(self, stt_data_manager, video_name, step_text, segment, main_window, description="Add Step"):  
         super().__init__(description)  
@@ -61,37 +64,36 @@ class StepAddCommand(QUndoCommand):
         self.step_text = step_text  
         self.segment = segment  
         self.main_window = main_window  
-        self.step_entry = None  
+        self.added_step_entry = None  
           
     def redo(self):  
-        self.stt_data_manager.add_step(self.video_name, self.step_text, self.segment)  
-        # 追加されたステップエントリを保存  
-        if self.video_name in self.stt_data_manager.stt_dataset.database:  
+        # STTDataManagerを使用してステップを追加  
+        success = self.stt_data_manager.add_step(self.video_name, self.step_text, self.segment)  
+        if success:  
+            # 追加されたステップエントリの参照を保存  
             video_data = self.stt_data_manager.stt_dataset.database[self.video_name]  
-            self.step_entry = video_data.steps[-1]  # 最後に追加されたもの  
+            self.added_step_entry = video_data.steps[-1]  # 最後に追加されたステップ  
         self._update_ui()  
           
     def undo(self):  
-        if (self.step_entry and self.video_name in self.stt_data_manager.stt_dataset.database):  
+        if self.added_step_entry and self.video_name in self.stt_data_manager.stt_dataset.database:  
             video_data = self.stt_data_manager.stt_dataset.database[self.video_name]  
-            if self.step_entry in video_data.steps:  
-                video_data.steps.remove(self.step_entry)  
+            if self.added_step_entry in video_data.steps:  
+                video_data.steps.remove(self.added_step_entry)  
         self._update_ui()  
       
-    def _update_ui(self):      
-        if self.main_window:      
-            # 新しいアーキテクチャではApplicationCoordinatorに委譲  
+    def _update_ui(self):  
+        if self.main_window:  
             self.main_window.on_data_changed()  
-            
-            if hasattr(self.main_window, 'edit_widget_manager'):      
-                # StepEditorのUIを更新  
-                step_editor = self.main_window.edit_widget_manager.step_editor  
+              
+            if hasattr(self.main_window, 'edit_widget_manager'):  
+                step_editor = self.main_window.edit_widget_manager.get_step_editor()  
                 step_editor.refresh_step_list()  
-                
-                # 選択状態を復元（StepAddCommandの場合）  
-                if hasattr(self, 'step_text'):  
-                    step_editor._select_newly_added_step(self.step_text)
-
+                  
+                # 新しく追加されたステップを選択  
+                if self.added_step_entry:  
+                    step_editor.select_step_by_label(self.step_text)  
+  
 class StepDeleteCommand(QUndoCommand):  
     def __init__(self, stt_data_manager, video_name, step_index, main_window, description="Delete Step"):  
         super().__init__(description)  
@@ -106,25 +108,24 @@ class StepDeleteCommand(QUndoCommand):
             video_data = self.stt_data_manager.stt_dataset.database[self.video_name]  
             if self.step_index < len(video_data.steps):  
                 self.deleted_step = video_data.steps[self.step_index]  
-                del video_data.steps[self.step_index]  
+                video_data.steps.pop(self.step_index)  
         self._update_ui()  
           
     def undo(self):  
-        if (self.deleted_step and self.video_name in self.stt_data_manager.stt_dataset.database):  
+        if self.deleted_step and self.video_name in self.stt_data_manager.stt_dataset.database:  
             video_data = self.stt_data_manager.stt_dataset.database[self.video_name]  
             video_data.steps.insert(self.step_index, self.deleted_step)  
         self._update_ui()  
       
-    def _update_ui(self):      
-        if self.main_window:      
-            # 新しいアーキテクチャではApplicationCoordinatorに委譲  
+    def _update_ui(self):  
+        if self.main_window:  
             self.main_window.on_data_changed()  
-            
-            if hasattr(self.main_window, 'edit_widget_manager'):      
-                step_editor = self.main_window.edit_widget_manager.step_editor  
+              
+            if hasattr(self.main_window, 'edit_widget_manager'):  
+                step_editor = self.main_window.edit_widget_manager.get_step_editor()  
                 step_editor.refresh_step_list()  
-                # StepDeleteCommandでは削除後なので選択復元は不要
-
+                # StepDeleteCommandでは削除後なので選択復元は不要  
+  
 class StepTextEditCommand(QUndoCommand):  
     def __init__(self, stt_data_manager, video_name, step_index, old_text, new_text, main_window, description="Modify Step Text"):  
         super().__init__(description)  
@@ -153,12 +154,12 @@ class StepTextEditCommand(QUndoCommand):
         if self.main_window:      
             # 新しいアーキテクチャではApplicationCoordinatorに委譲  
             self.main_window.on_data_changed()  
-            
+              
             if hasattr(self.main_window, 'edit_widget_manager'):      
-                step_editor = self.main_window.edit_widget_manager.step_editor  
+                step_editor = self.main_window.edit_widget_manager.get_step_editor()  
                 step_editor.refresh_step_list()  
-                
+                  
                 # 選択状態を復元  
                 step_editor._restore_step_selection(  
                     self.new_text, self.step_index  
-                )  
+                )

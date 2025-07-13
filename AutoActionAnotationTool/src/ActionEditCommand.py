@@ -1,4 +1,4 @@
-# ActionEditCommand.py (新規)  
+# ActionEditCommand.py (修正版)  
 from PyQt6.QtGui import QUndoCommand  
   
 class ActionDetailModifyCommand(QUndoCommand):  
@@ -19,8 +19,16 @@ class ActionDetailModifyCommand(QUndoCommand):
       
     def _update_ui(self):  
         if self.main_window:  
-            self.main_window.update_display()
-
-        # IntegratedEditWidgetのUIも更新  
-        if hasattr(self.main_window, 'integrated_edit_widget'):  
-            self.main_window.integrated_edit_widget.update_interval_ui()
+            self.main_window.update_display()  
+  
+        # 新しいアーキテクチャではEditWidgetManagerを使用  
+        if hasattr(self.main_window, 'edit_widget_manager'):  
+            # ActionEditorのUIを更新  
+            action_editor = self.main_window.edit_widget_manager.get_action_editor()  
+            action_editor.update_interval_ui()  
+              
+            # クエリ結果が変更されたので、現在のクエリ結果を再設定  
+            self.main_window.edit_widget_manager.set_current_query_results(self.query_result)  
+              
+            # 全体のUIも更新  
+            self.main_window.edit_widget_manager.refresh_ui()

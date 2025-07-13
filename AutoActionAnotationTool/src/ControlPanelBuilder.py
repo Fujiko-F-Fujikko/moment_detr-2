@@ -1,157 +1,139 @@
-# ControlPanelBuilder.py  
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,  
-                            QComboBox, QListWidget, QSlider, QLabel)  
-from PyQt6.QtCore import Qt  
-from typing import Dict, Any, Tuple  
+# ControlPanelBuilder.py (新規実装)  
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,   
+                            QSlider, QComboBox, QListWidget, QGroupBox,   
+                            QListWidgetItem)  
+from PyQt6.QtCore import Qt, pyqtSignal  
+from typing import Dict, Any, List  
   
-class ControlPanelBuilder:  
+class ControlPanelBuilder(QWidget):  
     """右パネルのコントロール要素構築を担当するクラス"""  
       
-    def __init__(self):  
+    # シグナル定義  
+    confidenceChanged = pyqtSignal(float)  
+    handTypeFilterChanged = pyqtSignal(str)  
+    resultItemClicked = pyqtSignal(object)  
+      
+    def __init__(self, parent=None):  
+        super().__init__(parent)  
         self.ui_components: Dict[str, Any] = {}  
+        self.setup_ui()  
       
-    def create_control_panel(self) -> Tuple[QWidget, Dict[str, Any]]:  
-        """右パネル全体を構築"""  
-        right_widget = QWidget()  
+    def setup_ui(self):  
+        """UIレイアウトの設定"""  
         layout = QVBoxLayout()  
           
-        # Hand Type フィルタグループ  
-        filter_group, filter_components = self.create_filter_controls()  
+        # フィルタコントロールグループ  
+        filter_group = self.create_filter_controls()  
         layout.addWidget(filter_group)  
-        self.ui_components.update(filter_components)  
           
-        # Detection Results グループ  
-        results_group, results_components = self.create_results_display()  
+        # 結果表示グループ  
+        results_group = self.create_results_display()  
         layout.addWidget(results_group)  
-        self.ui_components.update(results_components)  
           
-        # Confidence Filter グループ  
-        confidence_group, confidence_components = self.create_confidence_controls()  
+        # 信頼度コントロールグループ  
+        confidence_group = self.create_confidence_controls()  
         layout.addWidget(confidence_group)  
-        self.ui_components.update(confidence_components)  
           
-        right_widget.setLayout(layout)  
-        return right_widget, self.ui_components.copy()  
+        self.setLayout(layout)  
       
-    def create_filter_controls(self) -> Tuple[QGroupBox, Dict[str, Any]]:  
-        """Hand Type フィルタコントロールを作成"""  
-        group = QGroupBox("Filter by Hand Type")  
-        layout = QVBoxLayout()  
-          
-        # Hand Type フィルタコンボボックス  
-        hand_type_combo = QComboBox()  
-        hand_type_combo.addItems(["All", "LeftHand", "RightHand", "BothHands", "Other"])  
-          
-        layout.addWidget(QLabel("Hand Type:"))  
-        layout.addWidget(hand_type_combo)  
-          
-        group.setLayout(layout)  
-          
-        components = {  
-            'hand_type_combo': hand_type_combo  
-        }  
-          
-        return group, components  
-      
-    def create_results_display(self) -> Tuple[QGroupBox, Dict[str, Any]]:  
-        """Detection Results 表示を作成"""  
-        group = QGroupBox("Detection Results")  
-        layout = QVBoxLayout()  
-          
-        # 結果リスト  
-        results_list = QListWidget()  
-        results_list.setMinimumHeight(200)  
-          
-        # スタイルシートを適用  
-        results_list.setStyleSheet("""  
-            QListWidget::item:selected {  
-                background-color: #3daee9;  
-                color: white;  
-                border: 2px solid #2980b9;  
-            }  
-            QListWidget::item:hover {  
-                background-color: #e3f2fd;  
-            }  
-        """)  
-          
-        layout.addWidget(results_list)  
-        group.setLayout(layout)  
-          
-        components = {  
-            'results_list': results_list  
-        }  
-          
-        return group, components  
-      
-    def create_confidence_controls(self) -> Tuple[QGroupBox, Dict[str, Any]]:  
-        """Confidence フィルタコントロールを作成"""  
+    def create_filter_controls(self) -> QGroupBox:  
+        """フィルタコントロールを作成"""  
         group = QGroupBox("Filters")  
         layout = QVBoxLayout()  
           
-        # Confidence Threshold  
-        confidence_layout = QHBoxLayout()  
-        confidence_slider = QSlider(Qt.Orientation.Horizontal)  
-        confidence_slider.setRange(0, 100)  
-        confidence_slider.setValue(0)  
-        confidence_value_label = QLabel("0.00")  
+        # Hand Typeフィルタ  
+        hand_type_layout = QHBoxLayout()  
+        hand_type_label = QLabel("Hand Type:")  
+        hand_type_combo = QComboBox()  
+        hand_type_combo.addItems(["All", "LeftHand", "RightHand", "BothHands", "None", "Other"])  
+        hand_type_combo.setCurrentText("All")  
+        hand_type_combo.currentTextChanged.connect(self.handTypeFilterChanged.emit)  
           
-        confidence_layout.addWidget(QLabel("Confidence:"))  
-        confidence_layout.addWidget(confidence_slider)  
-        confidence_layout.addWidget(confidence_value_label)  
+        hand_type_layout.addWidget(hand_type_label)  
+        hand_type_layout.addWidget(hand_type_combo)  
+        layout.addLayout(hand_type_layout)  
           
-        layout.addLayout(confidence_layout)  
+        # UI要素を保存  
+        self.ui_components['hand_type_combo'] = hand_type_combo  
+          
         group.setLayout(layout)  
-          
-        components = {  
-            'confidence_slider': confidence_slider,  
-            'confidence_value_label': confidence_value_label  
-        }  
-          
-        return group, components  
+        return group  
       
-    def get_ui_components(self) -> Dict[str, Any]:  
-        """作成されたUI要素の辞書を取得"""  
-        return self.ui_components.copy()  
+    def create_results_display(self) -> QGroupBox:  
+        """結果表示を作成"""  
+        group = QGroupBox("Detection Results")  
+        layout = QVBoxLayout()  
+        
+        # 結果リスト  
+        results_list = QListWidget()  
+        results_list.itemClicked.connect(self._on_result_item_clicked)  
+        
+        # デバッグ用の初期アイテムを追加  
+        debug_item = QListWidgetItem("No results loaded yet...")  
+        debug_item.setFlags(debug_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)  
+        results_list.addItem(debug_item)  
+        
+        layout.addWidget(results_list)  
+        
+        # UI要素を保存  
+        self.ui_components['results_list'] = results_list  
+        print("DEBUG: ControlPanelBuilder created results_list")  
+        
+        group.setLayout(layout)  
+        return group 
       
-    def create_custom_filter_group(self, title: str, controls: Dict[str, Any]) -> Tuple[QGroupBox, Dict[str, Any]]:  
-        """カスタムフィルタグループを作成（拡張用）"""  
-        group = QGroupBox(title)  
+    def create_confidence_controls(self) -> QGroupBox:  
+        """信頼度コントロールを作成"""  
+        group = QGroupBox("Confidence Threshold")  
         layout = QVBoxLayout()  
           
-        components = {}  
+        # 信頼度スライダー  
+        slider_layout = QHBoxLayout()  
+        confidence_slider = QSlider(Qt.Orientation.Horizontal)  
+        confidence_slider.setMinimum(0)  
+        confidence_slider.setMaximum(100)  
+        confidence_slider.setValue(0)  
+        confidence_slider.valueChanged.connect(self._on_confidence_changed)  
           
-        for control_name, control_config in controls.items():  
-            if control_config['type'] == 'combo':  
-                combo = QComboBox()  
-                combo.addItems(control_config.get('items', []))  
-                layout.addWidget(QLabel(control_config.get('label', control_name)))  
-                layout.addWidget(combo)  
-                components[control_name] = combo  
-                  
-            elif control_config['type'] == 'slider':  
-                slider_layout = QHBoxLayout()  
-                slider = QSlider(Qt.Orientation.Horizontal)  
-                slider.setRange(control_config.get('min', 0), control_config.get('max', 100))  
-                slider.setValue(control_config.get('default', 0))  
-                  
-                value_label = QLabel(str(control_config.get('default', 0)))  
-                  
-                slider_layout.addWidget(QLabel(control_config.get('label', control_name)))  
-                slider_layout.addWidget(slider)  
-                slider_layout.addWidget(value_label)  
-                  
-                layout.addLayout(slider_layout)  
-                components[control_name] = slider  
-                components[f"{control_name}_label"] = value_label  
+        confidence_value_label = QLabel("0.00")  
+        confidence_value_label.setMinimumWidth(40)  
+          
+        slider_layout.addWidget(QLabel("Confidence:"))  
+        slider_layout.addWidget(confidence_slider)  
+        slider_layout.addWidget(confidence_value_label)  
+        layout.addLayout(slider_layout)  
+          
+        # UI要素を保存  
+        self.ui_components['confidence_slider'] = confidence_slider  
+        self.ui_components['confidence_value_label'] = confidence_value_label  
           
         group.setLayout(layout)  
-        return group, components  
+        return group  
       
-    def apply_theme(self, theme_name: str):  
-        """テーマを適用（将来の拡張用）"""  
-        if theme_name == "dark":  
-            # ダークテーマの設定  
-            pass  
-        elif theme_name == "light":  
-            # ライトテーマの設定  
-            pass
+    def _on_confidence_changed(self, value: int):  
+        """信頼度スライダー変更時の処理"""  
+        confidence = value / 100.0  
+        self.ui_components['confidence_value_label'].setText(f"{confidence:.2f}")  
+        self.confidenceChanged.emit(confidence)  
+      
+    def _on_result_item_clicked(self, item):  
+        """結果アイテムクリック時の処理"""  
+        if hasattr(item, 'data') and item.data(Qt.ItemDataRole.UserRole):  
+            query_result = item.data(Qt.ItemDataRole.UserRole)  
+            self.resultItemClicked.emit(query_result)  
+      
+    def get_ui_components(self) -> Dict[str, Any]:  
+        """UI要素を取得"""  
+        return self.ui_components  
+      
+    def update_results_display(self, query_results: List):  
+        """結果表示を更新"""  
+        results_list = self.ui_components.get('results_list')  
+        if results_list:  
+            results_list.clear()  
+            for result in query_results:  
+                item_text = f"{result.query_text} ({len(result.relevant_windows)} intervals)"  
+                item = results_list.addItem(item_text)  
+                if hasattr(results_list, 'item'):  
+                    list_item = results_list.item(results_list.count() - 1)  
+                    list_item.setData(Qt.ItemDataRole.UserRole, result)

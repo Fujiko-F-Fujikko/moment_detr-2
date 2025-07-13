@@ -7,7 +7,7 @@ from ResultsDataController import ResultsDataController
 from STTDataController import STTDataController  
 from TimelineDisplayManager import TimelineDisplayManager  
 from EditWidgetManager import EditWidgetManager  
-from Results import DetectionInterval  
+from Results import DetectionInterval, QueryResults
   
 class ApplicationCoordinator(QObject):  
     """コンポーネント間の調整とイベント処理を担当するクラス"""  
@@ -16,7 +16,7 @@ class ApplicationCoordinator(QObject):
     videoLoaded = pyqtSignal(str)  # video_path  
     resultsLoaded = pyqtSignal(list)  # List[QueryResults]  
     dataChanged = pyqtSignal()  
-    intervalSelected = pyqtSignal(object, int)  # interval, index  
+    intervalSelected = pyqtSignal(object)  # query_result  
       
     def __init__(self, main_window=None):  
         super().__init__()  
@@ -172,18 +172,22 @@ class ApplicationCoordinator(QObject):
         """推論結果を読み込み"""  
         try:  
             results = self.results_data_controller.load_inference_results(json_path)  
-              
+            
             # STTデータに推論結果を追加  
             video_name = self.video_data_controller.get_video_name()  
             if video_name:  
                 self.stt_data_controller.add_inference_results(video_name, results)  
-              
+            
             self.current_query_results = results  
+            
+            # シグナル発信（修正：結果を引数として渡す）  
             self.resultsLoaded.emit(results)  
-              
+            
             # コンポーネント同期  
             self.synchronize_components()  
-              
+            
+            print(f"DEBUG: ApplicationCoordinator loaded {len(results)} results")  
+            
         except Exception as e:  
             print(f"Failed to load inference results: {e}")  
       
@@ -194,23 +198,25 @@ class ApplicationCoordinator(QObject):
       
     def handle_results_loaded(self, results):  
         """結果読み込み完了時の処理"""  
+        print(f"DEBUG: ApplicationCoordinator handling {len(results)} loaded results")  
         self.current_query_results = results  
         self.synchronize_components()  
-      
+    
     def handle_results_filtered(self, filtered_results):  
         """結果フィルタリング時の処理"""  
+        print(f"DEBUG: ApplicationCoordinator handling {len(filtered_results)} filtered results")  
         if self.timeline_display_manager:  
             video_name = self.video_data_controller.get_video_name()  
             self.timeline_display_manager.set_query_results(  
                 filtered_results, self.stt_data_controller, video_name  
-            )  
+            )
       
     def handle_dataset_updated(self):  
         """データセット更新時の処理"""  
         self.synchronize_components()  
         self.dataChanged.emit()  
       
-    def handle_timeline_interval_clicked(self, interval: DetectionInterval, query_result):  
+    def handle_timeline_interval_clicked(self, interval: DetectionInterval, query_result: QueryResults):  
         """タイムライン区間クリック時の処理"""  
         # 編集ウィジェットに選択を設定  
         if self.edit_widget_manager and query_result:  
@@ -232,7 +238,7 @@ class ApplicationCoordinator(QObject):
         if self.timeline_display_manager:  
             self.timeline_display_manager.set_highlighted_interval(interval)  
           
-        self.intervalSelected.emit(interval, 0)  
+        self.intervalSelected.emit(query_result)
       
     def handle_interval_drag_started(self, interval: DetectionInterval):  
         """区間ドラッグ開始時の処理"""  
@@ -259,27 +265,27 @@ class ApplicationCoordinator(QObject):
         if self.main_window and hasattr(self.main_window, 'undo_stack'):  
             old_start = getattr(self.main_window, 'drag_original_start', interval.start_time)  
             old_end = getattr(self.main_window, 'drag_original_end', interval.end_time)  
-              
+            
             # ステップかアクションかを判定してコマンドを作成  
             if (hasattr(interval, 'query_result') and   
                 hasattr(interval.query_result, 'query_text') and   
                 interval.query_result.query_text.startswith("Step:")):  
-                  
-                from StepModifyCommand import StepModifyCommand  
-                command = StepModifyCommand(  
+                
+                from StepEditCommand import StepEditCommand  
+                command = StepEditCommand(  
                     interval, old_start, old_end, new_start, new_end,  
                     self.stt_data_controller,   
                     self.video_data_controller.get_video_name(),   
                     self.main_window  
                 )  
             else:  
-                from IntervalModifyCommand import IntervalModifyCommand  
-                command = IntervalModifyCommand(  
+                from IntervalEditCommand import IntervalEditCommand  
+                command = IntervalEditCommand(  
                     interval, old_start, old_end, new_start, new_end, self.main_window  
                 )  
-              
+            
             self.main_window.undo_stack.push(command)  
-      
+    
     def handle_new_interval_created(self, start_time: float, end_time: float, timeline_type: str):  
         """新規区間作成時の処理"""  
         # 現在のクエリ結果に新しい区間を追加  
@@ -289,12 +295,13 @@ class ApplicationCoordinator(QObject):
             if query_result:  
                 new_interval = DetectionInterval(start_time, end_time, 1.0, 0)  
                 new_interval.query_result = query_result  
-                  
-                if self.edit_widget_manager.get_command_factory():  
-                    command = self.edit_widget_manager.get_command_factory().create_interval_add_command(  
-                        query_result, new_interval  
-                    )  
-                    self.edit_widget_manager.get_command_factory().execute_command(command)  
+                
+                # 新しいコマンドシステムを使用  
+                from IntervalEditCommand import IntervalAddCommand  
+                command = IntervalAddCommand(query_result, new_interval, self.main_window)  
+                
+                if hasattr(self.main_window, 'undo_stack'):  
+                    self.main_window.undo_stack.push(command) 
       
     def handle_time_position_changed(self, time: float):  
         """時間位置変更時の処理"""  

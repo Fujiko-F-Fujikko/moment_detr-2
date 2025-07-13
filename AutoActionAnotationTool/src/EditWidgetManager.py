@@ -122,23 +122,38 @@ class EditWidgetManager(QWidget):
         """現在のタブインデックスを設定"""  
         if self.tab_widget and 0 <= index < self.tab_widget.count():  
             self.tab_widget.setCurrentIndex(index)  
-      
-    def get_action_editor(self) -> ActionEditor:  
+     
+    def get_action_editor(self):  
         """ActionEditorを取得"""  
-        return self.action_editor  
+        if hasattr(self, 'action_editor'):  
+            return self.action_editor  
+        return None  
       
-    def get_step_editor(self) -> StepEditor:  
+    def get_step_editor(self):  
         """StepEditorを取得"""  
-        return self.step_editor  
+        if hasattr(self, 'step_editor'):  
+            return self.step_editor  
+        return None  
       
     def refresh_ui(self):  
-        """UI全体を更新"""  
-        # ステップリストを更新  
-        self.step_editor.refresh_step_list()  
+        """全体のUIを更新"""  
+        # ActionEditorの更新  
+        action_editor = self.get_action_editor()  
+        if action_editor:  
+            action_editor.update_interval_ui()  
           
-        # アクション編集UIを更新  
-        self.action_editor.update_interval_ui()  
+        # StepEditorの更新  
+        step_editor = self.get_step_editor()  
+        if step_editor:  
+            step_editor.refresh_step_list()  
+          
+        # その他のUI更新処理  
+        self.update()  
       
+    def update_display(self):  
+        """表示を更新（MainApplicationWindowから呼び出される）"""  
+        self.refresh_ui()
+
     def get_current_state(self) -> dict:  
         """現在の編集状態を取得（デバッグ用）"""  
         return {  

@@ -154,31 +154,7 @@ class ResultsDataController(QObject):
     def get_filtered_results(self) -> List[QueryResults]:  
         """フィルタされた結果を取得"""  
         return self.filtered_results  
-      
-    def save_results(self, file_path: str):  
-        """結果を保存"""  
-        inference_results = InferenceResults(  
-            results=self.all_results,  
-            timestamp=None,  
-            model_info={},  
-            video_path=None,  
-            total_queries=len(self.all_results)  
-        )  
-        self.inference_saver.save_to_json(inference_results, file_path)  
-      
-    def update_result(self, updated_result: QueryResults):  
-        """特定の結果を更新"""  
-        for i, result in enumerate(self.all_results):  
-            if result.query_id == updated_result.query_id:  
-                self.all_results[i] = updated_result  
-                break  
-          
-        # フィルタを再適用  
-        self._apply_current_filters()  
-          
-        # シグナル発信  
-        self.resultsUpdated.emit(self.all_results)  
-      
+   
     def is_results_loaded(self) -> bool:  
         """結果が読み込まれているかチェック"""  
         return len(self.all_results) > 0  
@@ -189,3 +165,78 @@ class ResultsDataController(QObject):
         self.filtered_results.clear()  
         self.confidence_threshold = 0.0  
         self.current_hand_type_filter = "All"
+
+    def update_result(self, query_result: QueryResults) -> bool:  
+        """特定の結果を更新"""  
+        try:  
+            # all_resultsから該当する結果を検索して更新  
+            for i, result in enumerate(self.all_results):  
+                if (result.query_text == query_result.query_text and   
+                    result.video_id == query_result.video_id):  
+                    self.all_results[i] = query_result  
+                    break  
+              
+            # フィルタを再適用  
+            self._apply_current_filters()  
+              
+            # シグナル発信  
+            self.resultsUpdated.emit(self.all_results)  
+            return True  
+              
+        except Exception as e:  
+            raise Exception(f"Failed to update result: {str(e)}")  
+      
+    def save_results(self, file_path: str) -> bool:  
+        """結果をファイルに保存"""  
+        try:  
+            inference_results = InferenceResults(  
+                results=self.all_results,  
+                timestamp=None,  
+                model_info={},  
+                video_path=None,  
+                total_queries=len(self.all_results)  
+            )  
+            self.inference_saver.save_to_json(inference_results, file_path)  
+            return True  
+              
+        except Exception as e:  
+            raise Exception(f"Failed to save results: {str(e)}")  
+      
+    def add_result(self, query_result: QueryResults) -> bool:  
+        """新しい結果を追加"""  
+        try:  
+            self.all_results.append(query_result)  
+            self._apply_current_filters()  
+            self.resultsUpdated.emit(self.all_results)  
+            return True  
+              
+        except Exception as e:  
+            raise Exception(f"Failed to add result: {str(e)}")  
+      
+    def remove_result(self, query_id: str) -> bool:  
+        """結果を削除"""  
+        try:  
+            self.all_results = [r for r in self.all_results if r.query_id != query_id]  
+            self._apply_current_filters()  
+            self.resultsUpdated.emit(self.all_results)  
+            return True  
+              
+        except Exception as e:  
+            raise Exception(f"Failed to remove result: {str(e)}")  
+      
+    def get_result_by_id(self, query_id: str) -> Optional[QueryResults]:  
+        """IDで結果を取得"""  
+        for result in self.all_results:  
+            if result.query_id == query_id:  
+                return result  
+        return None  
+      
+    def get_current_state(self) -> Dict:  
+        """現在の状態を取得（デバッグ用）"""  
+        return {  
+            'total_results': len(self.all_results),  
+            'filtered_results': len(self.filtered_results),  
+            'confidence_threshold': self.confidence_threshold,  
+            'hand_type_filter': self.current_hand_type_filter,  
+            'is_loaded': self.is_results_loaded()  
+        }

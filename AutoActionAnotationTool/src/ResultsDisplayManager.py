@@ -1,61 +1,82 @@
-from PyQt6.QtCore import QObject, pyqtSignal, Qt
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QListWidget, QListWidgetItem
-from typing import List
-from ResultsDataController import ResultsDataController
-from Results import QueryResults
-
-
-# ResultsDisplayManager.py (UI表示専用)  
+# ResultsDisplayManager.py (修正版)  
+from PyQt6.QtWidgets import QListWidget, QListWidgetItem  
+from PyQt6.QtCore import QObject, pyqtSignal, Qt  
+from typing import Optional  
+from ResultsDataController import ResultsDataController  
+  
 class ResultsDisplayManager(QObject):  
-    """推論結果の表示管理を担当するクラス"""  
+    """結果表示の管理を担当するクラス"""  
       
-    intervalSelected = pyqtSignal(object, int)  # (interval, index)  
+    # シグナル定義  
+    intervalSelected = pyqtSignal(object)  # query_result  
       
-    def __init__(self, results_data_controller: ResultsDataController):  
+    def __init__(self, results_controller: ResultsDataController):  
         super().__init__()  
-        self.data_controller = results_data_controller  
-        self._results_list_widget = None  
+        self.results_controller = results_controller  
+        self.results_list: Optional[QListWidget] = None  
           
-        # データコントローラーのシグナルに接続  
-        self.data_controller.resultsFiltered.connect(self.update_display)  
+        # ResultsDataControllerのシグナル接続を修正  
+        self.results_controller.resultsLoaded.connect(self.update_display)  
+        self.results_controller.resultsFiltered.connect(self.update_display)  
+        self.results_controller.resultsUpdated.connect(self.update_display)  
       
     def set_ui_components(self, results_list: QListWidget):  
         """UI要素を設定"""  
-        self._results_list_widget = results_list  
-        if results_list:  
-            results_list.itemClicked.connect(self.on_result_item_clicked)  
+        self.results_list = results_list  
+        if self.results_list:  
+            self.results_list.itemClicked.connect(self._on_item_clicked)  
+              
+            # 初期表示を更新（データが既に読み込まれている場合）  
+            if self.results_controller.is_results_loaded():  
+                self.update_display()  
       
-    def update_display(self, filtered_results: List[QueryResults]):  
+    def update_display(self, results=None):  
         """表示を更新"""  
-        if not self._results_list_widget:  
+        if not self.results_list:  
+            print("DEBUG: results_list is None")  
             return  
           
-        self._results_list_widget.clear()  
-        grouped_results = self.data_controller.group_results_by_hand_type(filtered_results)  
+        # リストをクリア  
+        self.results_list.clear()  
           
-        for hand_type, results in grouped_results.items():  
-            if not results:  
-                continue  
-              
-            # ヘッダー追加  
-            header_item = QListWidgetItem(f"=== {hand_type} ===")  
-            header_item.setBackground(QColor(230, 230, 230))  
-            header_item.setFlags(header_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)  
-            self._results_list_widget.addItem(header_item)  
-              
-            # 区間アイテム追加  
-            for result in results:  
-                for i, interval in enumerate(result.relevant_windows):  
-                    item_text = f"  {i+1}: {interval.start_time:.2f}s - {interval.end_time:.2f}s (conf: {interval.confidence_score:.4f})"  
-                    item = QListWidgetItem(item_text)  
-                    item.setData(1, {'type': 'interval', 'interval': interval, 'index': i})  
-                    self._results_list_widget.addItem(item)  
+        # フィルタされた結果を取得  
+        if results is None:  
+            filtered_results = self.results_controller.get_filtered_results()  
+        else:  
+            filtered_results = results  
+          
+        print(f"DEBUG: Updating display with {len(filtered_results)} results")  
+          
+        # 各結果をリストに追加  
+        for i, result in enumerate(filtered_results):  
+            try:  
+                interval_count = len(result.relevant_windows) if hasattr(result, 'relevant_windows') else 0  
+                item_text = f"{result.query_text} ({interval_count} intervals)"  
+                item = QListWidgetItem(item_text)  
+                item.setData(Qt.ItemDataRole.UserRole, result)  
+                self.results_list.addItem(item)  
+                print(f"DEBUG: Added item {i}: {item_text}")  
+            except Exception as e:  
+                print(f"DEBUG: Error adding item {i}: {e}")  
       
-    def on_result_item_clicked(self, item: QListWidgetItem):  
-        """結果アイテムクリック処理"""  
-        data = item.data(1)  
-        if data and data.get('type') == 'interval':  
-            interval = data['interval']  
-            index = data['index']  
-            self.intervalSelected.emit(interval, index)
+    def _on_item_clicked(self, item: QListWidgetItem):  
+        """アイテムクリック時の処理"""  
+        query_result = item.data(Qt.ItemDataRole.UserRole)  
+        self.intervalSelected.emit(query_result)
+      
+    def select_result_by_query_text(self, query_text: str):  
+        """クエリテキストで結果を選択"""  
+        if not self.results_list:  
+            return  
+          
+        for i in range(self.results_list.count()):  
+            item = self.results_list.item(i)  
+            query_result = item.data(Qt.ItemDataRole.UserRole)  
+            if query_result and query_result.query_text == query_text:  
+                self.results_list.setCurrentItem(item)  
+                break  
+      
+    def force_refresh(self):  
+        """強制的に表示を更新"""  
+        print("DEBUG: Force refresh called")  
+        self.update_display()
