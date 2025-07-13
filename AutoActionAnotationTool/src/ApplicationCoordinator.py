@@ -226,8 +226,10 @@ class ApplicationCoordinator(QObject):
             if hasattr(query_result, 'relevant_windows'):  
                 try:  
                     index = query_result.relevant_windows.index(interval)  
+                    print(f"DEBUG: Setting selected interval at index {index}")
                     self.edit_widget_manager.set_selected_interval(interval, index)  
                 except ValueError:  
+                    print(f"DEBUG: Interval not found in query result: {interval}")
                     self.edit_widget_manager.set_selected_interval(interval, 0)  
           
         # 動画をその位置にシーク  

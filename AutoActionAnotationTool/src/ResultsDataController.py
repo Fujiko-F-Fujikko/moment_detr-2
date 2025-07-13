@@ -74,7 +74,7 @@ class ResultsDataController(QObject):
         """Hand Type別にフィルタリング"""  
         if hand_type == "All":  
             return results  
-          
+        
         filtered = []  
         for result in results:  
             # Stepクエリの場合は特別処理  
@@ -82,18 +82,18 @@ class ResultsDataController(QObject):
                 if hand_type == "Other":  
                     filtered.append(result)  
                 continue  
-              
+            
             try:  
                 detected_hand_type, _ = QueryParser.validate_and_parse_query(result.query_text)  
                 if detected_hand_type == hand_type:  
                     filtered.append(result)  
-                elif hand_type == "Other" and detected_hand_type is None:  
+                elif hand_type == "Other" and detected_hand_type == "None":  # 古い実装に合わせて修正  
                     filtered.append(result)  
             except QueryValidationError:  
                 if hand_type == "Other":  
                     filtered.append(result)  
-          
-        return filtered  
+        
+        return filtered
       
     def _filter_by_confidence(self, results: List[QueryResults], threshold: float) -> List[QueryResults]:  
         """信頼度でフィルタリング"""  

@@ -1,9 +1,12 @@
 # ResultsDisplayManager.py (修正版)  
 from PyQt6.QtWidgets import QListWidget, QListWidgetItem  
 from PyQt6.QtCore import QObject, pyqtSignal, Qt  
-from typing import Optional  
+from PyQt6.QtGui import QColor
+from typing import Optional, List
 from ResultsDataController import ResultsDataController  
-  
+from Results import QueryResults
+from STTDataStructures import QueryParser, QueryValidationError
+
 class ResultsDisplayManager(QObject):  
     """結果表示の管理を担当するクラス"""  
       
@@ -31,33 +34,42 @@ class ResultsDisplayManager(QObject):
                 self.update_display()  
       
     def update_display(self, results=None):  
-        """表示を更新"""  
+        """表示を更新（古い実装仕様に合わせて修正）"""  
         if not self.results_list:  
-            print("DEBUG: results_list is None")  
             return  
-          
+        
         # リストをクリア  
         self.results_list.clear()  
-          
+        
         # フィルタされた結果を取得  
         if results is None:  
             filtered_results = self.results_controller.get_filtered_results()  
         else:  
             filtered_results = results  
-          
-        print(f"DEBUG: Updating display with {len(filtered_results)} results")  
-          
-        # 各結果をリストに追加  
-        for i, result in enumerate(filtered_results):  
-            try:  
-                interval_count = len(result.relevant_windows) if hasattr(result, 'relevant_windows') else 0  
-                item_text = f"{result.query_text} ({interval_count} intervals)"  
-                item = QListWidgetItem(item_text)  
-                item.setData(Qt.ItemDataRole.UserRole, result)  
-                self.results_list.addItem(item)  
-                print(f"DEBUG: Added item {i}: {item_text}")  
-            except Exception as e:  
-                print(f"DEBUG: Error adding item {i}: {e}")  
+        
+        # 手の種類別にグループ化  
+        grouped_results = self._group_results_by_hand_type(filtered_results)  
+        
+        # 各手の種類ごとに表示  
+        for hand_type, results in grouped_results.items():  
+            if not results:  
+                continue  
+            
+            # ヘッダーアイテムを追加  
+            header_item = QListWidgetItem(f"=== {hand_type} ===")  
+            header_item.setBackground(QColor(230, 230, 230))  
+            header_item.setFlags(header_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)  
+            self.results_list.addItem(header_item)  
+            
+            # 各クエリの区間を個別に表示  
+            for result in results:  
+                for i, interval in enumerate(result.relevant_windows):  
+                    if interval.confidence_score >= self.results_controller.confidence_threshold:  
+                        # 区間の詳細情報を表示  
+                        item_text = f"  {i+1}: {interval.start_time:.2f}s - {interval.end_time:.2f}s (conf: {interval.confidence_score:.4f})"  
+                        item = QListWidgetItem(item_text)  
+                        item.setData(Qt.ItemDataRole.UserRole, result)  
+                        self.results_list.addItem(item)
       
     def _on_item_clicked(self, item: QListWidgetItem):  
         """アイテムクリック時の処理"""  
@@ -80,3 +92,33 @@ class ResultsDisplayManager(QObject):
         """強制的に表示を更新"""  
         print("DEBUG: Force refresh called")  
         self.update_display()
+
+    def _group_results_by_hand_type(self, results: List[QueryResults]) -> dict:  
+        """結果をhand type毎にグループ化（古い実装仕様）"""  
+        groups = {  
+            "LeftHand": [],  
+            "RightHand": [],  
+            "BothHands": [],  
+            "Other": []  
+        }  
+        
+        for result in results:  
+            # Stepクエリの場合は検証をスキップ  
+            if result.query_text.startswith("Step:"):  
+                groups["Other"].append(result)  
+                continue  
+            
+            try:  
+                hand_type, _ = QueryParser.validate_and_parse_query(result.query_text)  
+                if hand_type == "LeftHand":  
+                    groups["LeftHand"].append(result)  
+                elif hand_type == "RightHand":  
+                    groups["RightHand"].append(result)  
+                elif hand_type == "BothHands":  
+                    groups["BothHands"].append(result)  
+                else:  # None  
+                    groups["Other"].append(result)  
+            except QueryValidationError:  
+                groups["Other"].append(result)  
+        
+        return groups

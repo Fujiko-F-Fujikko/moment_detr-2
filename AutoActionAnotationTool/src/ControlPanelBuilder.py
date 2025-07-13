@@ -45,7 +45,7 @@ class ControlPanelBuilder(QWidget):
         hand_type_layout = QHBoxLayout()  
         hand_type_label = QLabel("Hand Type:")  
         hand_type_combo = QComboBox()  
-        hand_type_combo.addItems(["All", "LeftHand", "RightHand", "BothHands", "None", "Other"])  
+        hand_type_combo.addItems(["All", "LeftHand", "RightHand", "BothHands", "Other"])  
         hand_type_combo.setCurrentText("All")  
         hand_type_combo.currentTextChanged.connect(self.handTypeFilterChanged.emit)  
           
