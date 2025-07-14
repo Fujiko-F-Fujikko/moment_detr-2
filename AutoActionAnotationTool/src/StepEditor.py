@@ -202,28 +202,8 @@ class StepEditor(QWidget):
             self.stepAdded.emit()  
             self.dataChanged.emit()
             # 最後に選択状態を更新
-            self._select_newly_added_step(step_text)  
-      
-    def _select_newly_added_step(self, step_text: str):  
-        """新しく追加されたステップを選択状態にする"""  
-        # ステップリストを更新  
-        self.refresh_step_list()  
-          
-        # 追加されたステップを検索して選択  
-        for i in range(self.step_list.count()):  
-            item = self.step_list.item(i)  
-            if item.text() == step_text:  
-                # アイテムを選択状態にする  
-                self.step_list.setCurrentItem(item)  
-                item.setSelected(True)  
-                  
-                # スクロールして表示  
-                self.step_list.scrollToItem(item, QListWidget.ScrollHint.PositionAtCenter)  
-                  
-                # 編集フィールドに値を設定  
-                self.on_step_selected(item)  
-                break  
-      
+            self.select_step(step_text=step_text)  
+            
     def on_step_value_changed(self):  
         """Step値が変更された時の即時処理"""  
         print("on_step_value_changed called")  # デバッグ用  
@@ -283,7 +263,7 @@ class StepEditor(QWidget):
         self.dataChanged.emit() 
 
         # 最後に選択状態を更新
-        self._restore_step_selection(new_text if text_changed else old_text, index)  
+        self.select_step(step_text=new_text if text_changed else old_text, step_index=index)
       
     def _apply_segment_changes(self, old_segment: list, new_segment: list, step_text: str):  
         """セグメント変更をタイムラインに適用"""  
@@ -317,21 +297,6 @@ class StepEditor(QWidget):
                 finally:  
                     # シグナルを再有効化  
                     self._block_signals(False)
-
-    def _restore_step_selection(self, step_text: str, original_index: int):  
-        """ステップの選択状態を復元"""  
-        # 更新されたステップテキストまたは元のインデックスで検索  
-        for i in range(self.step_list.count()):  
-            item = self.step_list.item(i)  
-            item_index = item.data(1)  
-            
-            # インデックスが一致するか、テキストが一致する場合に選択  
-            if item_index == original_index or item.text() == step_text:  
-                self.step_list.setCurrentItem(item)  
-                item.setSelected(True)  
-                self.step_list.scrollToItem(item, QListWidget.ScrollHint.PositionAtCenter)  
-                self.on_step_selected(item)  
-                break
       
     def delete_step(self):  
         """ステップを削除"""  
@@ -349,22 +314,34 @@ class StepEditor(QWidget):
         # シグナル発信  
         self.stepDeleted.emit()  
         self.dataChanged.emit()  
-
-    def select_step_by_label(self, step_label: str):  
-        """ラベルでステップを選択"""  
+      
+    def select_step(self, step_text: str = None, step_index: int = None):  
+        """テキストまたはインデックスでステップを選択"""  
         if not self.step_list:  
-            print("Step list is not initialized")
+            print("Step list is not initialized")  
             return  
         
         for i in range(self.step_list.count()):  
             item = self.step_list.item(i)  
-            if item and item.text() == step_label:  
+            if not item:  
+                continue  
+                
+            item_index = item.data(1)  
+            
+            # テキストまたはインデックスで一致判定  
+            match_found = False  
+            if step_text and item.text() == step_text:  
+                match_found = True  
+            elif step_index is not None and item_index == step_index:  
+                match_found = True  
+                
+            if match_found:  
                 self.step_list.setCurrentItem(item)  
                 item.setSelected(True)  
                 self.step_list.scrollToItem(item, QListWidget.ScrollHint.PositionAtCenter)  
                 self.on_step_selected(item)  
                 break
-      
+
     def get_current_state(self) -> dict:  
         """現在の編集状態を取得（デバッグ用）"""  
         current_item = self.step_list.currentItem() if self.step_list else None  

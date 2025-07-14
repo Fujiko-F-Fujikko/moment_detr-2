@@ -93,8 +93,8 @@ class EditWidgetManager(QWidget):
             if interval.query_result.query_text.startswith("Step:"):  
                 # Step区間の場合、StepEditorで該当ステップを選択  
                 if hasattr(interval, 'label') and interval.label:  
-                    self.step_editor.select_step_by_label(interval.label)  
-        
+                    self.step_editor.select_step(step_text=interval.label)
+                    
         # 区間の種類に応じて適切なタブに切り替え  
         self.switch_to_appropriate_tab(interval)
       
@@ -109,7 +109,7 @@ class EditWidgetManager(QWidget):
                 self.tab_widget.setCurrentIndex(1)  
                 # クリックされたステップを選択状態にする  
                 if hasattr(interval, 'label'):  
-                    self.step_editor.select_step_by_label(interval.label)  
+                    self.step_editor.select_step(step_text=interval.label)  
             else:  
                 # Action Editタブに切り替え  
                 self.tab_widget.setCurrentIndex(0)  

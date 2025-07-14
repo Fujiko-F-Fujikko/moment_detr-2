@@ -149,6 +149,6 @@ class StepTextEditCommand(QUndoCommand):
                 step_editor.refresh_step_list()  
                   
                 # 選択状態を復元  
-                step_editor._restore_step_selection(  
-                    self.new_text, self.step_index  
+                step_editor.select_step(  
+                    step_text=self.new_text, step_index=self.step_index  
                 )
