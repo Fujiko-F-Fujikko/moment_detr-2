@@ -176,10 +176,9 @@ class TimelineRenderer:
             else:  
                 return QColor(255, 0, 255, alpha), QColor(200, 0, 0)  # マゼンタ  
           
-        # ハイライト対象  
-        elif (timeline_data.highlighted_interval and   
-              interval.start_time == timeline_data.highlighted_interval.start_time and  
-              interval.end_time == timeline_data.highlighted_interval.end_time):  
+        # ハイライト対象
+        elif timeline_data.highlighted_interval and \
+            interval == timeline_data.highlighted_interval:  
             return QColor(255, 255, 0, alpha), QColor(255, 200, 0)  # 黄色  
           
         # 通常色  

@@ -10,6 +10,7 @@ from EditWidgetManager import EditWidgetManager
 from Results import DetectionInterval, QueryResults
 from ResultsDisplayManager import ResultsDisplayManager
 from Utilities import show_call_stack  # デバッグ用スタックトレース表示
+from STTDataStructures import QueryParser, QueryValidationError
   
 class ApplicationCoordinator(QObject):  
     """コンポーネント間の調整とイベント処理を担当するクラス"""  
@@ -218,28 +219,28 @@ class ApplicationCoordinator(QObject):
     def handle_timeline_interval_clicked(self, interval: DetectionInterval, query_result: QueryResults):  
         """タイムライン区間クリック時の処理"""  
         if self.edit_widget_manager and query_result:  
+            # クエリのHandTypeを確認  
+            try:  
+                query_hand_type, _ = QueryParser.validate_and_parse_query(query_result.query_text)  
+                print(f"DEBUG: Selected query hand type: {query_hand_type}")  
+            except QueryValidationError:  
+                query_hand_type = "Unknown"  
+            
             self.edit_widget_manager.set_current_query_results(query_result)  
             
-            # より正確なインデックス特定  
             if hasattr(query_result, 'relevant_windows'):  
                 index = -1  
                 for i, window in enumerate(query_result.relevant_windows):  
-                    # 時間範囲とconfidenceスコアで一致を確認  
-                    if (abs(window.start_time - interval.start_time) < 0.01 and   
-                        abs(window.end_time - interval.end_time) < 0.01 and  
-                        abs(window.confidence_score - interval.confidence_score) < 0.001):  
+                    print(f"type of window: {type(window)}")  # デバッグ用
+                    if window == interval:
                         index = i  
                         break  
                 
                 if index >= 0:  
                     self.edit_widget_manager.set_selected_interval(interval, index)  
                 else:  
-                    # フォールバック: 元のロジック  
-                    try:  
-                        index = query_result.relevant_windows.index(interval)  
-                        self.edit_widget_manager.set_selected_interval(interval, index)  
-                    except ValueError:  
-                        self.edit_widget_manager.set_selected_interval(interval, 0)
+                    print(f"DEBUG: Interval not found in correct query")  
+                    return
 
         # Detection Results一覧で対応する項目を選択  
         if hasattr(self, 'results_display_manager') and self.results_display_manager:  
