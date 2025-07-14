@@ -244,3 +244,9 @@ class STTDataController(QObject):
     def is_dataset_loaded(self) -> bool:  
         """データセットが読み込まれているかチェック"""  
         return len(self.stt_dataset.database) > 0
+
+    def get_steps(self, video_name: str) -> List[StepEntry]:  
+        """指定された動画のステップリストを取得"""  
+        if video_name not in self.stt_dataset.database:  
+            return []  
+        return self.stt_dataset.database[video_name].steps

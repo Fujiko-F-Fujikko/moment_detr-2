@@ -185,14 +185,14 @@ class TimelineDisplayManager(QWidget):
         """新しいアーキテクチャでタイムラインウィジェットを作成"""    
         from PyQt6.QtWidgets import QWidget    
         from PyQt6.QtGui import QPaintEvent    
-        from PyQt6.QtCore import Qt    
             
         class TimelineWidget(QWidget):    
             def __init__(self, parent_manager, timeline_type, query_results=None, step_intervals=None):    
                 super().__init__()    
                 self.parent_manager = parent_manager    
                 self.timeline_type = timeline_type    
-                self.timeline_data = TimelineData()    
+                self.timeline_data = TimelineData()
+                self.timeline_type = timeline_type
                     
                 # データ設定    
                 if step_intervals:    
@@ -233,11 +233,15 @@ class TimelineDisplayManager(QWidget):
                 )    
                 self.update()    
                 
-            def mouseReleaseEvent(self, event):    
-                self.parent_manager.interaction_handler.handle_mouse_release(    
-                    event, self.timeline_data, self.width()    
-                )    
-                self.update()    
+            def mouseReleaseEvent(self, event):  
+                # 新規区間作成完了時に適切なタイムライン種別を渡す  
+                if self.parent_manager.interaction_handler.is_creating_new_interval:  
+                    start_time = self.parent_manager.interaction_handler.new_interval_start_time  
+                    end_time = self.parent_manager.interaction_handler.new_interval_end_time  
+                    # 適切なタイムライン種別を渡す  
+                    self.parent_manager.event_coordinator._handle_new_interval_created(  
+                        "main", start_time, end_time, self.timeline_type  
+                    )
                 
             def set_video_duration(self, duration: float):    
                 self.timeline_data.video_duration = duration    
@@ -486,6 +490,14 @@ class TimelineDisplayManager(QWidget):
             timeline_widget = self._find_timeline_widget(widget)  
             if timeline_widget:  
                 timeline_widget.setCursor(cursor)
+
+    # 各タイムラインの種別を管理  
+    def setup_timeline_connections(self, timeline_widget, timeline_type):  
+        timeline_widget.newIntervalCreated.connect(  
+            lambda start, end: self.event_coordinator._handle_new_interval_created(  
+                "main", start, end, timeline_type  
+            )  
+        )
 
     def get_current_state(self) -> dict:    
         """現在の状態を取得（デバッグ用）"""    

@@ -307,20 +307,42 @@ class ApplicationCoordinator(QObject):
     
     def handle_new_interval_created(self, start_time: float, end_time: float, timeline_type: str):  
         """新規区間作成時の処理"""  
-        # 現在のクエリ結果に新しい区間を追加  
-        if self.current_query_results and self.edit_widget_manager:  
-            # 適切なクエリ結果を選択（簡略化）  
-            query_result = self.current_query_results[0] if self.current_query_results else None  
-            if query_result:  
-                new_interval = DetectionInterval(start_time, end_time, 1.0, 0)  
-                new_interval.query_result = query_result  
+        if timeline_type == "Steps":  
+            # Step用の新規区間作成処理  
+            # STTデータに新しいステップを追加  
+            video_name = self.video_data_controller.get_video_name()  
+            if video_name and self.stt_data_controller:  
+                # 新しいステップを作成  
+                if video_name in self.stt_data_controller.stt_dataset.database:  
+                    steps_count = len(self.stt_data_controller.stt_dataset.database[video_name].steps)  
+                    step_text = f"New Step {steps_count + 1}"  
+                else:  
+                    step_text = "New Step 1"
+                self.stt_data_controller.add_step(video_name, step_text, [start_time, end_time])  
+        else:  
+            # Action用の新規区間作成処理  
+            if self.current_query_results and self.edit_widget_manager:  
+                # timeline_typeに基づいて適切なクエリ結果を選択  
+                target_query_result = None  
+                for query_result in self.current_query_results:  
+                    if timeline_type in query_result.query_text or timeline_type == "RightHand":  
+                        target_query_result = query_result  
+                        break  
                 
-                # 新しいコマンドシステムを使用  
-                from IntervalEditCommand import IntervalAddCommand  
-                command = IntervalAddCommand(query_result, new_interval, self.main_window)  
+                # フォールバック: 適切なクエリ結果が見つからない場合は最初の要素を使用  
+                if not target_query_result:  
+                    target_query_result = self.current_query_results[0] if self.current_query_results else None  
                 
-                if hasattr(self.main_window, 'undo_stack'):  
-                    self.main_window.undo_stack.push(command) 
+                if target_query_result:  
+                    new_interval = DetectionInterval(start_time, end_time, 1.0, 0)  
+                    new_interval.query_result = target_query_result  
+                    
+                    # 新しいコマンドシステムを使用  
+                    from IntervalEditCommand import IntervalAddCommand  
+                    command = IntervalAddCommand(target_query_result, new_interval, self.main_window)  
+                    
+                    if hasattr(self.main_window, 'undo_stack'):  
+                        self.main_window.undo_stack.push(command)
       
     def handle_time_position_changed(self, time: float):  
         """時間位置変更時の処理"""  
