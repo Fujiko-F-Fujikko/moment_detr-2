@@ -9,6 +9,6 @@ AutoActionAnnotationToolのリファクタリングをしています。 古い�
 - [ ] 5. Timeline上でマウスボタンを押した後、ドラッグ操作できるときにマウスカーソルが変わらない（元の使用では矢印カーソルになったり手カーソルになったりするはず）
 - [x] 6. Action/Step両方のEditタブ上で、テキストボックスに入力して確定しても変更が反映されない
 - [x] 7. Action/Step両方のEditタブ上で、Delete Intervalボタンが効かない
-- [ ] 8.Actionタブ上で、Add Intervalボタンが効かない
+- [x] 8.Actionタブ上で、Add Intervalボタンが効かない
 
 古い実装を正として、これらの点に関して古い実装の通りに動作するように修正してください。

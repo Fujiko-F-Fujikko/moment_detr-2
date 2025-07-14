@@ -341,7 +341,6 @@ class ApplicationCoordinator(QObject):
     def handle_interval_deleted(self):  
         """区間削除時の処理"""  
         self.synchronize_timeline_updates()  
-        self.results_data_controller._apply_current_filters()
         self.dataChanged.emit()  
       
     def handle_interval_added(self):  

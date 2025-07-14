@@ -90,7 +90,19 @@ class IntervalAddCommand(QUndoCommand):
     def _update_ui(self):  
         if self.main_window:  
             self.main_window.update_display()  
-              
-        # 新しいアーキテクチャではEditWidgetManagerを使用  
-        if hasattr(self.main_window, 'edit_widget_manager'):  
-            self.main_window.edit_widget_manager.refresh_ui()
+            
+            # ApplicationCoordinatorを通じて完全な同期を実行  
+            if hasattr(self.main_window, 'application_coordinator'):  
+                coordinator = self.main_window.application_coordinator  
+                coordinator.synchronize_components()  
+
+            # ResultsDataControllerの再フィルタリングを強制実行  
+            results_controller = coordinator.get_results_data_controller()  
+            if results_controller:  
+                results_controller._apply_current_filters()  # フィルタ再適用
+
+            # EditWidgetManagerの更新  
+            if hasattr(self.main_window, 'edit_widget_manager'):  
+                self.main_window.edit_widget_manager.refresh_ui()  
+                # 選択状態をクリア  
+                self.main_window.edit_widget_manager.clear_selection()
