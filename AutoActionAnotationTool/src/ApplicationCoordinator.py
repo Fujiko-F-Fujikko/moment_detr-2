@@ -222,7 +222,6 @@ class ApplicationCoordinator(QObject):
             # クエリのHandTypeを確認  
             try:  
                 query_hand_type, _ = QueryParser.validate_and_parse_query(query_result.query_text)  
-                print(f"DEBUG: Selected query hand type: {query_hand_type}")  
             except QueryValidationError:  
                 query_hand_type = "Unknown"  
             
@@ -231,7 +230,6 @@ class ApplicationCoordinator(QObject):
             if hasattr(query_result, 'relevant_windows'):  
                 index = -1  
                 for i, window in enumerate(query_result.relevant_windows):  
-                    print(f"type of window: {type(window)}")  # デバッグ用
                     if window == interval:
                         index = i  
                         break  
@@ -239,7 +237,6 @@ class ApplicationCoordinator(QObject):
                 if index >= 0:  
                     self.edit_widget_manager.set_selected_interval(interval, index)  
                 else:  
-                    print(f"DEBUG: Interval not found in correct query")  
                     return
 
         # Detection Results一覧で対応する項目を選択  
@@ -344,6 +341,7 @@ class ApplicationCoordinator(QObject):
     def handle_interval_deleted(self):  
         """区間削除時の処理"""  
         self.synchronize_timeline_updates()  
+        self.results_data_controller._apply_current_filters()
         self.dataChanged.emit()  
       
     def handle_interval_added(self):  
