@@ -347,24 +347,18 @@ class StepEditor(QWidget):
         self.dataChanged.emit()  
 
     def select_step_by_label(self, step_label: str):  
-        """ステップラベルに基づいてステップリストで該当項目を選択"""  
-        if not step_label or not self.step_list:  
+        """ラベルでステップを選択"""  
+        if not self.step_list:  
             return  
-          
-        # ステップリストから該当するアイテムを検索  
+        
         for i in range(self.step_list.count()):  
             item = self.step_list.item(i)  
-            if item.text() == step_label:  
-                # アイテムを選択状態にする  
+            if item and item.text() == step_label:  
                 self.step_list.setCurrentItem(item)  
                 item.setSelected(True)  
-                  
-                # スクロールして表示  
                 self.step_list.scrollToItem(item, QListWidget.ScrollHint.PositionAtCenter)  
-                  
-                # 編集フィールドに値を設定  
                 self.on_step_selected(item)  
-                break  
+                break
       
     def get_current_state(self) -> dict:  
         """現在の編集状態を取得（デバッグ用）"""  

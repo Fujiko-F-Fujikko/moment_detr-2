@@ -85,10 +85,18 @@ class EditWidgetManager(QWidget):
       
     def set_selected_interval(self, interval: DetectionInterval, index: int):  
         """選択された区間を設定"""  
+        # ActionEditorに設定  
         self.action_editor.set_selected_interval(interval, index)  
-          
+        
+        # StepEditorにも情報を渡す（Step区間の場合）  
+        if hasattr(interval, 'query_result') and interval.query_result:  
+            if interval.query_result.query_text.startswith("Step:"):  
+                # Step区間の場合、StepEditorで該当ステップを選択  
+                if hasattr(interval, 'label') and interval.label:  
+                    self.step_editor.select_step_by_label(interval.label)  
+        
         # 区間の種類に応じて適切なタブに切り替え  
-        self.switch_to_appropriate_tab(interval)  
+        self.switch_to_appropriate_tab(interval)
       
     def switch_to_appropriate_tab(self, interval: DetectionInterval):  
         """区間の種類に応じて適切なタブに切り替える"""  

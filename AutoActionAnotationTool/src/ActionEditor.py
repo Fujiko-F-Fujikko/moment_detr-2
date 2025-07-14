@@ -8,7 +8,14 @@ from typing import Optional
 from Results import QueryResults, DetectionInterval  
 from EditCommandFactory import EditCommandFactory  
 from STTDataStructures import QueryParser  
-  
+
+def show_call_stack():
+    import traceback
+    stack = traceback.extract_stack()
+    # 最後のフレーム（この関数自身）は不要なので除く
+    for frame in stack[:-1]:
+        print(f"{frame.filename}:{frame.lineno} - in {frame.name}()")
+
 class ActionEditor(QWidget):  
     """アクション編集に特化したエディタークラス"""  
       
@@ -150,6 +157,12 @@ class ActionEditor(QWidget):
           
         self.selected_interval = interval  
         self.selected_interval_index = index  
+        # デバッグ情報を追加  
+
+        show_call_stack()  # デバッグ用：どこから呼ばれたかを表示
+        print(f"DEBUG: ActionEditor setting interval at index {index}")  
+        print(f"DEBUG: Interval ID: {getattr(interval, 'interval_id', 'None')}")  
+
         self.update_interval_ui()  
       
     def clear_selection(self):  

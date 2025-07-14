@@ -8,6 +8,7 @@ from STTDataController import STTDataController
 from TimelineDisplayManager import TimelineDisplayManager  
 from EditWidgetManager import EditWidgetManager  
 from Results import DetectionInterval, QueryResults
+from ResultsDisplayManager import ResultsDisplayManager
   
 class ApplicationCoordinator(QObject):  
     """コンポーネント間の調整とイベント処理を担当するクラス"""  
@@ -16,7 +17,6 @@ class ApplicationCoordinator(QObject):
     videoLoaded = pyqtSignal(str)  # video_path  
     resultsLoaded = pyqtSignal(list)  # List[QueryResults]  
     dataChanged = pyqtSignal()  
-    intervalSelected = pyqtSignal(object)  # query_result  
       
     def __init__(self, main_window=None):  
         super().__init__()  
@@ -48,11 +48,13 @@ class ApplicationCoordinator(QObject):
       
     def set_ui_components(self, timeline_display_manager: TimelineDisplayManager,  
                          edit_widget_manager: EditWidgetManager,  
-                         video_player_controller: VideoDataController):  
+                         video_player_controller: VideoDataController,
+                         results_display_manager: ResultsDisplayManager):  
         """UI管理コンポーネントを設定"""  
         self.timeline_display_manager = timeline_display_manager  
         self.edit_widget_manager = edit_widget_manager  
         self.video_player_controller = video_player_controller  
+        self.results_display_manager = results_display_manager
           
         # UI コンポーネントのシグナル接続  
         self._connect_ui_signals()  
@@ -218,30 +220,42 @@ class ApplicationCoordinator(QObject):
       
     def handle_timeline_interval_clicked(self, interval: DetectionInterval, query_result: QueryResults):  
         """タイムライン区間クリック時の処理"""  
-        # 編集ウィジェットに選択を設定  
         if self.edit_widget_manager and query_result:  
             self.edit_widget_manager.set_current_query_results(query_result)  
-              
-            # 区間のインデックスを特定  
+            
+            # より正確なインデックス特定  
             if hasattr(query_result, 'relevant_windows'):  
-                try:  
-                    index = query_result.relevant_windows.index(interval)  
-                    print(f"DEBUG: Setting selected interval at index {index}")
+                index = -1  
+                for i, window in enumerate(query_result.relevant_windows):  
+                    # 時間範囲とconfidenceスコアで一致を確認  
+                    if (abs(window.start_time - interval.start_time) < 0.01 and   
+                        abs(window.end_time - interval.end_time) < 0.01 and  
+                        abs(window.confidence_score - interval.confidence_score) < 0.001):  
+                        index = i  
+                        break  
+                
+                if index >= 0:  
                     self.edit_widget_manager.set_selected_interval(interval, index)  
-                except ValueError:  
-                    print(f"DEBUG: Interval not found in query result: {interval}")
-                    self.edit_widget_manager.set_selected_interval(interval, 0)  
-          
-        # 動画をその位置にシーク  
-        if self.video_player_controller:  
-            self.video_player_controller.seek_to_time(interval.start_time)  
-          
-        # タイムライン上でハイライト  
+                else:  
+                    # フォールバック: 元のロジック  
+                    try:  
+                        index = query_result.relevant_windows.index(interval)  
+                        self.edit_widget_manager.set_selected_interval(interval, index)  
+                    except ValueError:  
+                        self.edit_widget_manager.set_selected_interval(interval, 0)
+
+        # Detection Results一覧で対応する項目を選択  
+        if hasattr(self, 'results_display_manager') and self.results_display_manager:  
+            self.results_display_manager.select_interval_in_list(interval)  
+
+        # Timeline上で区間をハイライト（古い実装と同じ順序）  
         if self.timeline_display_manager:  
             self.timeline_display_manager.set_highlighted_interval(interval)  
-          
-        self.intervalSelected.emit(query_result)
-      
+        
+        # 動画をその位置にシーク（古い実装と同じ順序）  
+        if self.video_player_controller:  
+            self.video_player_controller.seek_to_time(interval.start_time)
+
     def handle_interval_drag_started(self, interval: DetectionInterval):  
         """区間ドラッグ開始時の処理"""  
         # 元の値を保存（Undo用）  

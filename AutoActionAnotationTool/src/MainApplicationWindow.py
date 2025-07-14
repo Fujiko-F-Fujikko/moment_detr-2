@@ -13,6 +13,7 @@ from EditWidgetManager import EditWidgetManager
 from LayoutOrchestrator import LayoutOrchestrator  
 from VideoPlayerController import VideoPlayerController  
 from FileManager import FileManager  
+from ResultsDisplayManager import ResultsDisplayManager
   
 class MainApplicationWindow(QMainWindow):  
     """UIの初期化とメニュー設定に特化したメインウィンドウクラス"""  
@@ -32,12 +33,14 @@ class MainApplicationWindow(QMainWindow):
         self.layout_orchestrator = LayoutOrchestrator(self)  
         self.video_controller = VideoPlayerController()  
         self.file_manager = FileManager()  
-          
-        # コンポーネント間の接続を設定  
-        self.coordinate_components()  
+        self.results_display_manager = ResultsDisplayManager(self.application_coordinator.get_results_data_controller())
           
         # UIを設定  
         self.setup_ui()  
+
+        # コンポーネント間の接続を設定  
+        self.coordinate_components()  
+          
         self.setup_connections()  
         self.setup_menus()  
       
@@ -47,7 +50,8 @@ class MainApplicationWindow(QMainWindow):
         self.application_coordinator.set_ui_components(  
             self.timeline_display_manager,  
             self.edit_widget_manager,  
-            self.video_controller  
+            self.video_controller,
+            self.results_display_manager
         )  
           
         # EditWidgetManagerにSTTDataControllerを設定  
@@ -71,10 +75,9 @@ class MainApplicationWindow(QMainWindow):
         # 結果表示管理を設定（修正版）  
         results_controller = self.application_coordinator.get_results_data_controller()  
         if 'results_list' in ui_components and ui_components['results_list'] is not None:  
-            from ResultsDisplayManager import ResultsDisplayManager  
             self.results_display_manager = ResultsDisplayManager(results_controller)  
             self.results_display_manager.set_ui_components(ui_components['results_list'])  
-            #self.results_display_manager.intervalSelected.connect(self.on_interval_selected)  
+            self.results_display_manager.intervalSelected.connect(self.on_interval_selected)  
             print("DEBUG: Signal connection established")  
         else:  
             print("DEBUG: results_list not found, signal not connected")  
@@ -97,7 +100,6 @@ class MainApplicationWindow(QMainWindow):
         self.application_coordinator.videoLoaded.connect(self.on_video_loaded)  
         self.application_coordinator.resultsLoaded.connect(self.on_results_loaded)  
         self.application_coordinator.dataChanged.connect(self.on_data_changed)  
-        #self.application_coordinator.intervalSelected.connect(self.on_interval_selected)  
           
         # 動画プレイヤーコントローラーの接続  
         self.video_controller.positionChanged.connect(self.on_video_position_changed)  
@@ -218,11 +220,24 @@ class MainApplicationWindow(QMainWindow):
         # ApplicationCoordinatorに委譲  
         self.application_coordinator.synchronize_components()  
       
-    def on_interval_selected(self, query_result):  
-        """ControlPanelBuilderからの結果アイテムクリック処理"""  
+    def on_interval_selected(self, query_result, interval=None, index=0):  
+        """Detection Results一覧からの選択処理（修正版）"""  
         if query_result and hasattr(query_result, 'relevant_windows') and query_result.relevant_windows:  
-            first_interval = query_result.relevant_windows[0]  
-            self.application_coordinator.handle_timeline_interval_clicked(first_interval, query_result)
+            # 実際にクリックされた区間を使用（引数で渡された場合）  
+            selected_interval = interval if interval else query_result.relevant_windows[0]  
+            selected_index = index if interval else 0  
+            
+            # 編集ウィジェットを直接更新  
+            self.application_coordinator.edit_widget_manager.set_current_query_results(query_result)  
+            self.application_coordinator.edit_widget_manager.set_selected_interval(selected_interval, selected_index)  
+            
+            # Timeline上でハイライト  
+            if self.application_coordinator.timeline_display_manager:  
+                self.application_coordinator.timeline_display_manager.set_highlighted_interval(selected_interval)  
+            
+            # 動画シーク  
+            if self.application_coordinator.video_player_controller:  
+                self.application_coordinator.video_player_controller.seek_to_time(selected_interval.start_time)
       
     def on_video_position_changed(self, position: int):  
         """動画位置変更時の処理"""  
