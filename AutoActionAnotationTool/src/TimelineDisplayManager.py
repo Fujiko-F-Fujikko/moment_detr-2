@@ -83,7 +83,10 @@ class TimelineDisplayManager(QWidget):
         self.interaction_handler.timePositionChanged.connect(    
             lambda time: self.event_coordinator._handle_time_position_changed("main", time)    
         )    
-        
+        self.interaction_handler.cursorChanged.connect(  
+            lambda cursor: self._update_widget_cursor(cursor)  
+        )
+
     def set_query_results(self, query_results_list: List[QueryResults],     
                          stt_data_manager=None, video_name: str = None):    
         """クエリ結果を設定してタイムラインを作成"""    
@@ -476,7 +479,14 @@ class TimelineDisplayManager(QWidget):
         elif event_type == "time_position_changed":    
             time = kwargs.get('time')    
             self.timePositionChanged.emit(time)    
-        
+
+    def _update_widget_cursor(self, cursor):  
+        """ウィジェットのカーソルを更新"""  
+        for widget in self.timeline_widgets:  
+            timeline_widget = self._find_timeline_widget(widget)  
+            if timeline_widget:  
+                timeline_widget.setCursor(cursor)
+
     def get_current_state(self) -> dict:    
         """現在の状態を取得（デバッグ用）"""    
         return {    

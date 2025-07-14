@@ -198,20 +198,24 @@ class TimelineInteractionHandler(QObject):
         new_end = self.dragging_interval.end_time  
           
         if self.drag_mode == 'move':  
-            # 移動モード  
-            pixel_delta = self.drag_start_pos.x() if self.drag_start_pos else 0  
+            # 現在のマウス位置から開始位置への差分を計算  
+            current_x = (current_time / timeline_data.video_duration) * widget_width  
+            pixel_delta = current_x - self.drag_start_pos.x()  
+            
+            # ピクセル差分を時間差分に変換  
             time_delta = (pixel_delta / widget_width) * timeline_data.video_duration  
-              
+            
+            # 元の区間位置に時間差分を適用  
             new_start = max(0, self.original_start_time + time_delta)  
             new_end = min(timeline_data.video_duration, self.original_end_time + time_delta)  
-              
+            
             # 区間の長さを保持  
             duration = self.original_end_time - self.original_start_time  
             if new_end - new_start != duration:  
                 if new_start == 0:  
                     new_end = duration  
                 elif new_end == timeline_data.video_duration:  
-                    new_start = timeline_data.video_duration - duration  
+                    new_start = timeline_data.video_duration - duration 
           
         elif self.drag_mode == 'resize_start':  
             # 開始時間リサイズ  
