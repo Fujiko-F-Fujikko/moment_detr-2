@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import pyqtSignal, QTimer
 from typing import Optional  
   
+from Results import QueryResults
 from EditCommandFactory import EditCommandFactory  
 from Utilities import show_call_stack
   
@@ -23,6 +24,7 @@ class StepEditor(QWidget):
         self.command_factory = EditCommandFactory(main_window) if main_window else None  
         self.stt_data_manager = None  
         self.current_video_name: Optional[str] = None  
+        self.current_query_result: Optional[QueryResults] = None
           
         # UI要素  
         self.step_text_edit: Optional[QLineEdit] = None  
@@ -256,7 +258,6 @@ class StepEditor(QWidget):
           
         # UIを即座に更新  
         self.refresh_step_list()  
-        self._update_step_edit_ui()  # この行を追加  
         
         # シグナル発信  
         self.stepModified.emit()  
@@ -272,12 +273,7 @@ class StepEditor(QWidget):
           
         # ApplicationCoordinator経由でステップセグメント更新を処理  
         coordinator = self.main_window.application_coordinator  
-        if coordinator and hasattr(coordinator, 'handle_step_segment_update'):  
-            coordinator.handle_step_segment_update(step_text, old_segment, new_segment)  
-        else:  
-            # フォールバック: synchronize_step_updatesを呼び出し  
-            if coordinator:  
-                coordinator.synchronize_step_updates()  
+        coordinator.handle_step_segment_update(step_text, old_segment, new_segment)
 
     def _update_step_edit_ui(self):  
         """Step編集UIの現在選択項目を更新"""  
@@ -314,7 +310,20 @@ class StepEditor(QWidget):
         # シグナル発信  
         self.stepDeleted.emit()  
         self.dataChanged.emit()  
-      
+
+    def set_current_query_results(self, query_result: QueryResults):  
+        """現在のクエリ結果を設定"""  
+        self.current_query_result = query_result  
+    
+    def update_interval_realtime(self, new_start: float, new_end: float):  
+        """ドラッグ中のリアルタイム更新"""  
+        self._block_signals(True)  
+        try:  
+            self.step_start_spin.setValue(new_start)  
+            self.step_end_spin.setValue(new_end)  
+        finally:  
+            self._block_signals(False)  
+
     def select_step(self, step_text: str = None, step_index: int = None):  
         """テキストまたはインデックスでステップを選択"""  
         if not self.step_list:  

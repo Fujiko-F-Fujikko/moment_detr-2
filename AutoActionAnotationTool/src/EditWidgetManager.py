@@ -75,8 +75,14 @@ class EditWidgetManager(QWidget):
       
     def set_current_query_results(self, query_result: QueryResults):  
         """現在のクエリ結果を設定"""  
-        self.action_editor.set_current_query_results(query_result)  
-          
+        # StepEditorにも情報を設定（Step関連の場合）  
+        if query_result and query_result.query_text.startswith("Step:"):  
+            # StepEditorに必要な情報を設定  
+            self.step_editor.set_current_query_results(query_result)  
+        else:
+            # ActionEditorに必要な情報を設定  
+            self.action_editor.set_current_query_results(query_result)
+
         # ステップクエリの場合はStep編集タブに切り替え  
         if query_result and query_result.query_text.startswith("Step:"):  
             self.tab_widget.setCurrentIndex(1)  # Step Edit tab  

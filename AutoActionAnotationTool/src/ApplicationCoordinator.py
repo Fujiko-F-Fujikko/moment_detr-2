@@ -267,6 +267,14 @@ class ApplicationCoordinator(QObject):
             try:  
                 index = interval.query_result.relevant_windows.index(interval)  
                 self.edit_widget_manager.set_selected_interval(interval, index)  
+
+                # Step区間の場合は追加でリアルタイム更新  
+                if (hasattr(interval.query_result, 'query_text') and   
+                    interval.query_result.query_text.startswith("Step:")):  
+                    step_editor = self.edit_widget_manager.get_step_editor()  
+                    if step_editor:  
+                        step_editor.update_interval_realtime(new_start, new_end)  
+
             except ValueError:  
                 pass  
       
@@ -353,6 +361,24 @@ class ApplicationCoordinator(QObject):
         self.synchronize_components()  
         self.dataChanged.emit()  
       
+    def handle_step_segment_update(self, step_text: str, old_segment: list, new_segment: list):  
+        """ステップセグメント更新の処理"""  
+        video_name = self.video_data_controller.get_video_name()  
+        if video_name and self.stt_data_controller:  
+            # 該当するステップのインデックスを見つける  
+            if video_name in self.stt_data_controller.stt_dataset.database:  
+                video_data = self.stt_data_controller.stt_dataset.database[video_name]  
+                for i, step in enumerate(video_data.steps):  
+                    if step.step == step_text:  
+                        # 既存のmodify_stepメソッドを使用してセグメントを更新  
+                        self.stt_data_controller.modify_step(  
+                            video_name, i, new_segment=new_segment  
+                        )  
+                        break  
+        
+        # コンポーネント同期  
+        self.synchronize_step_updates()
+
     def synchronize_timeline_updates(self):  
         """タイムライン更新の同期"""  
         #show_call_stack()

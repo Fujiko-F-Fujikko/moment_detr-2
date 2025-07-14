@@ -10,6 +10,6 @@ AutoActionAnnotationToolのリファクタリングをしています。 古い�
 - [x] 6. Action/Step両方のEditタブ上で、テキストボックスに入力して確定しても変更が反映されない
 - [x] 7. Action/Step両方のEditタブ上で、Delete Intervalボタンが効かない
 - [x] 8. Actionタブ上で、Add Intervalボタンが効かない
-- [ ] 9. Stepタブ上で、start/endの時間の変更が効かない。入力⇒Enter設楽元の数字に戻る
+- [x] 9. Stepタブ上で、start/endの時間の変更が効かない。入力⇒Enter設楽元の数字に戻る
 
 古い実装を正として、これらの点に関して古い実装の通りに動作するように修正してください。
