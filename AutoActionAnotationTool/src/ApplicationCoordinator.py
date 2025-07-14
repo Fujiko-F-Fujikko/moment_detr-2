@@ -9,6 +9,7 @@ from TimelineDisplayManager import TimelineDisplayManager
 from EditWidgetManager import EditWidgetManager  
 from Results import DetectionInterval, QueryResults
 from ResultsDisplayManager import ResultsDisplayManager
+from Utilities import show_call_stack  # デバッグ用スタックトレース表示
   
 class ApplicationCoordinator(QObject):  
     """コンポーネント間の調整とイベント処理を担当するクラス"""  
@@ -187,9 +188,7 @@ class ApplicationCoordinator(QObject):
             
             # コンポーネント同期  
             self.synchronize_components()  
-            
-            print(f"DEBUG: ApplicationCoordinator loaded {len(results)} results")  
-            
+                        
         except Exception as e:  
             print(f"Failed to load inference results: {e}")  
       
@@ -200,13 +199,11 @@ class ApplicationCoordinator(QObject):
       
     def handle_results_loaded(self, results):  
         """結果読み込み完了時の処理"""  
-        print(f"DEBUG: ApplicationCoordinator handling {len(results)} loaded results")  
         self.current_query_results = results  
         self.synchronize_components()  
     
     def handle_results_filtered(self, filtered_results):  
         """結果フィルタリング時の処理"""  
-        print(f"DEBUG: ApplicationCoordinator handling {len(filtered_results)} filtered results")  
         if self.timeline_display_manager:  
             video_name = self.video_data_controller.get_video_name()  
             self.timeline_display_manager.set_query_results(  
@@ -339,7 +336,8 @@ class ApplicationCoordinator(QObject):
       
     def handle_interval_updated(self):  
         """区間更新時の処理"""  
-        self.synchronize_timeline_updates()  
+        self.synchronize_timeline_updates() 
+        self.synchronize_components() 
         self.dataChanged.emit()  
       
     def handle_interval_deleted(self):  
@@ -359,6 +357,7 @@ class ApplicationCoordinator(QObject):
       
     def synchronize_timeline_updates(self):  
         """タイムライン更新の同期"""  
+        #show_call_stack()
         if self.timeline_display_manager:  
             self.timeline_display_manager.update_all_timelines()  
       

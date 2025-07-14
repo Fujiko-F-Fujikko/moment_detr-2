@@ -103,7 +103,6 @@ class ResultsDisplayManager(QObject):
       
     def force_refresh(self):  
         """強制的に表示を更新"""  
-        print("DEBUG: Force refresh called")  
         self.update_display()
 
     def _group_results_by_hand_type(self, results: List[QueryResults]) -> dict:  
@@ -138,20 +137,15 @@ class ResultsDisplayManager(QObject):
 
     def select_interval_in_list(self, target_interval):  
         """Detection Resultsリストで指定された区間を選択"""  
-        print(f"DEBUG: Selecting interval {target_interval.interval_id} in results display")
-        print(f"results_list: {self.results_list}")
         if not self.results_list:  
             return  
         
         # 既存の選択をクリア  
         self.results_list.clearSelection()  
-
-        print(f"DEBUG: Selecting interval after clearing selection")
         
         for i in range(self.results_list.count()):  
             item = self.results_list.item(i)  
             data = item.data(Qt.ItemDataRole.UserRole)  
-            print(f"DEBUG: Checking item {i}: {data}")
             if data and isinstance(data, dict) and 'interval' in data:  
                 interval = data['interval']  
                 if (abs(interval.start_time - target_interval.start_time) < 0.01 and   

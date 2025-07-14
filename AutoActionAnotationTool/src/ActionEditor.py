@@ -8,13 +8,7 @@ from typing import Optional
 from Results import QueryResults, DetectionInterval  
 from EditCommandFactory import EditCommandFactory  
 from STTDataStructures import QueryParser  
-
-def show_call_stack():
-    import traceback
-    stack = traceback.extract_stack()
-    # 最後のフレーム（この関数自身）は不要なので除く
-    for frame in stack[:-1]:
-        print(f"{frame.filename}:{frame.lineno} - in {frame.name}()")
+from Utilities import show_call_stack  # デバッグ用スタックトレース表示
 
 class ActionEditor(QWidget):  
     """アクション編集に特化したエディタークラス"""  
@@ -159,10 +153,7 @@ class ActionEditor(QWidget):
         self.selected_interval_index = index  
         # デバッグ情報を追加  
 
-        show_call_stack()  # デバッグ用：どこから呼ばれたかを表示
-        print(f"DEBUG: ActionEditor setting interval at index {index}")  
-        print(f"DEBUG: Interval ID: {getattr(interval, 'interval_id', 'None')}")  
-
+        #show_call_stack()
         self.update_interval_ui()  
       
     def clear_selection(self):  
@@ -280,10 +271,10 @@ class ActionEditor(QWidget):
           
         self._action_timer = QTimer()  
         self._action_timer.setSingleShot(True)  
-        self._action_timer.timeout.connect(self.apply_interval_changes)  
+        self._action_timer.timeout.connect(self.apply_action_changes)  
         self._action_timer.start(500)  # 500ms後に適用  
       
-    def apply_interval_changes(self):  
+    def apply_action_changes(self):  
         """区間変更を適用"""  
         if (self._is_initializing or not self.selected_interval or   
             not self.current_query_result or not self.command_factory):  
@@ -320,10 +311,18 @@ class ActionEditor(QWidget):
                 self.current_query_result, old_query_text, new_query_text  
             )  
           
+        # コマンド実行後、UIを即座に更新（古い実装と同様）  
+        self.update_interval_ui() 
+
         # シグナル発信  
         self.intervalUpdated.emit()  
         self.dataChanged.emit()  
-      
+
+        # Timeline同期を実行
+        if hasattr(self, 'main_window') and self.main_window:  
+            if hasattr(self.main_window, 'application_coordinator'):  
+                self.main_window.application_coordinator.synchronize_timeline_updates()
+
     def _build_new_query_text(self) -> str:  
         """入力フィールドから新しいクエリテキストを構築"""  
         hand_mapping = {  

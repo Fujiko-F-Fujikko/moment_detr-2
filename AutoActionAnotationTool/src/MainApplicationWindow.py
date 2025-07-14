@@ -14,6 +14,7 @@ from LayoutOrchestrator import LayoutOrchestrator
 from VideoPlayerController import VideoPlayerController  
 from FileManager import FileManager  
 from ResultsDisplayManager import ResultsDisplayManager
+from Utilities import show_call_stack  # デバッグ用スタックトレース表示
   
 class MainApplicationWindow(QMainWindow):  
     """UIの初期化とメニュー設定に特化したメインウィンドウクラス"""  
@@ -78,10 +79,8 @@ class MainApplicationWindow(QMainWindow):
             self.results_display_manager = ResultsDisplayManager(results_controller)  
             self.results_display_manager.set_ui_components(ui_components['results_list'])  
             self.results_display_manager.intervalSelected.connect(self.on_interval_selected)  
-            print("DEBUG: Signal connection established")  
         else:  
             print("DEBUG: results_list not found, signal not connected")  
-            print(f"DEBUG: Available UI components: {list(ui_components.keys())}")  
         
         # フィルタコントロールの設定  
         if 'confidence_slider' in ui_components:  
@@ -193,6 +192,7 @@ class MainApplicationWindow(QMainWindow):
     def update_display(self):  
         """表示を更新（コマンドクラスから呼び出される）"""  
         # ApplicationCoordinatorを通じて同期  
+        #show_call_stack()
         if hasattr(self, 'application_coordinator'):  
             self.application_coordinator.synchronize_components()  
           
@@ -211,7 +211,6 @@ class MainApplicationWindow(QMainWindow):
       
     def on_results_loaded(self, results):  
         """結果読み込み完了時の処理"""  
-        print(f"DEBUG: Results loaded: {len(results)} results")  
         if hasattr(self, 'results_display_manager') and self.results_display_manager:  
             self.results_display_manager.force_refresh()
 
