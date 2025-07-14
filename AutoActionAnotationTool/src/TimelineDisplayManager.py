@@ -63,27 +63,28 @@ class TimelineDisplayManager(QWidget):
         self.event_coordinator.intervalDragFinished.connect(self.intervalDragFinished)    
         self.event_coordinator.newIntervalCreated.connect(self.newIntervalCreated)    
         self.event_coordinator.timePositionChanged.connect(self.timePositionChanged)    
-            
-        # TimelineInteractionHandlerのシグナル接続    
-        self.interaction_handler.intervalClicked.connect(    
+    
+    def interaction_handler_connections(self, _interaction_handler: TimelineInteractionHandler):    
+        """インタラクションハンドラのシグナル接続を設定"""    
+        _interaction_handler.intervalClicked.connect(    
             lambda interval: self.event_coordinator._handle_interval_clicked("main", interval, "default")    
         )    
-        self.interaction_handler.intervalDragStarted.connect(    
+        _interaction_handler.intervalDragStarted.connect(    
             lambda interval: self.event_coordinator._handle_interval_drag_started("main", interval)    
         )    
-        self.interaction_handler.intervalDragMoved.connect(    
+        _interaction_handler.intervalDragMoved.connect(    
             lambda interval, start, end: self.event_coordinator._handle_interval_drag_moved("main", interval, start, end)    
         )    
-        self.interaction_handler.intervalDragFinished.connect(    
+        _interaction_handler.intervalDragFinished.connect(    
             lambda interval, start, end: self.event_coordinator._handle_interval_drag_finished("main", interval, start, end)    
         )    
-        self.interaction_handler.newIntervalCreated.connect(    
-            lambda start, end: self.event_coordinator._handle_new_interval_created("main", start, end, "default")    
-        )    
-        self.interaction_handler.timePositionChanged.connect(    
+        _interaction_handler.timePositionChanged.connect(    
             lambda time: self.event_coordinator._handle_time_position_changed("main", time)    
         )    
-        self.interaction_handler.cursorChanged.connect(  
+        _interaction_handler.newIntervalCreated.connect(  
+            lambda start, end, timeline_type: self.event_coordinator._handle_new_interval_created("main", start, end, timeline_type)  
+        )
+        _interaction_handler.cursorChanged.connect(  
             lambda cursor: self._update_widget_cursor(cursor)  
         )
 
@@ -185,7 +186,12 @@ class TimelineDisplayManager(QWidget):
         """新しいアーキテクチャでタイムラインウィジェットを作成"""    
         from PyQt6.QtWidgets import QWidget    
         from PyQt6.QtGui import QPaintEvent    
-            
+
+        # TimelineInteractionHandlerにタイムライン種別を渡す  
+        interaction_handler = TimelineInteractionHandler(timeline_type) 
+        # 個別にシグナル接続を設定
+        self.interaction_handler_connections(interaction_handler)
+
         class TimelineWidget(QWidget):    
             def __init__(self, parent_manager, timeline_type, query_results=None, step_intervals=None):    
                 super().__init__()    
@@ -193,6 +199,7 @@ class TimelineDisplayManager(QWidget):
                 self.timeline_type = timeline_type    
                 self.timeline_data = TimelineData()
                 self.timeline_type = timeline_type
+                self.interaction_handler = interaction_handler
                     
                 # データ設定    
                 if step_intervals:    
@@ -222,26 +229,22 @@ class TimelineDisplayManager(QWidget):
                 self.parent_manager.renderer.render_timeline(painter, rect, self.timeline_data)    
                 
             def mousePressEvent(self, event):    
-                self.parent_manager.interaction_handler.handle_mouse_press(    
+                self.interaction_handler.handle_mouse_press(    
                     event, self.timeline_data, self.width()    
                 )    
                 self.update()    
                 
             def mouseMoveEvent(self, event):    
-                self.parent_manager.interaction_handler.handle_mouse_move(    
+                self.interaction_handler.handle_mouse_move(    
                     event, self.timeline_data, self.width()    
                 )    
                 self.update()    
                 
             def mouseReleaseEvent(self, event):  
-                # 新規区間作成完了時に適切なタイムライン種別を渡す  
-                if self.parent_manager.interaction_handler.is_creating_new_interval:  
-                    start_time = self.parent_manager.interaction_handler.new_interval_start_time  
-                    end_time = self.parent_manager.interaction_handler.new_interval_end_time  
-                    # 適切なタイムライン種別を渡す  
-                    self.parent_manager.event_coordinator._handle_new_interval_created(  
-                        "main", start_time, end_time, self.timeline_type  
-                    )
+                self.interaction_handler.handle_mouse_release(  
+                    event, self.timeline_data, self.width()  
+                )  
+                self.update()
                 
             def set_video_duration(self, duration: float):    
                 self.timeline_data.video_duration = duration    

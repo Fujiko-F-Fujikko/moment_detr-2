@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 from DetectionInterval import DetectionInterval  
 from TimelineData import TimelineData
+from Utilities import show_call_stack
   
 class TimelineInteractionHandler(QObject):  
     """タイムラインのマウスインタラクション処理に特化したクラス"""  
@@ -16,11 +17,12 @@ class TimelineInteractionHandler(QObject):
     intervalDragStarted = pyqtSignal(DetectionInterval)  
     intervalDragMoved = pyqtSignal(DetectionInterval, float, float)  
     intervalDragFinished = pyqtSignal(DetectionInterval, float, float)  
-    newIntervalCreated = pyqtSignal(float, float)  
+    newIntervalCreated = pyqtSignal(float, float, str)  # start_time, end_time, timeline_type  
     cursorChanged = pyqtSignal(object)  # QCursor  
       
-    def __init__(self):  
+    def __init__(self, timeline_type: str = "default"):  
         super().__init__()  
+        self.timeline_type = timeline_type
         self.resize_edge_threshold = 10  # ピクセル単位でのリサイズエッジの幅  
         self.min_drag_distance = 5  # 最小ドラッグ距離  
         self.min_interval_duration = 0.1  # 最小区間長  
@@ -98,11 +100,24 @@ class TimelineInteractionHandler(QObject):
       
     def handle_mouse_release(self, event: QMouseEvent, timeline_data: 'TimelineData', widget_width: int) -> bool:  
         """マウスリリースイベントを処理"""  
-        # 新規区間作成完了  
-        if self.is_creating_new_interval and self.new_interval_end_time is not None:  
-            self.newIntervalCreated.emit(self.new_interval_start_time, self.new_interval_end_time)  
+        show_call_stack()  # デバッグ用
+        # 新規区間作成完了（ドラッグ距離チェック付き）  
+        if self.is_creating_new_interval:  
+            print(f"New interval creation in progress: {self.new_interval_start_time} to {self.new_interval_end_time}")
+            # 実際にドラッグが行われた場合のみ新規区間を作成  
+            if (self.new_interval_end_time is not None and   
+                hasattr(self, 'new_interval_start_pos') and   
+                self.new_interval_start_pos is not None):  
+                
+                # 最小ドラッグ距離をチェック  
+                distance = abs(event.position().x() - self.new_interval_start_pos)  
+                print(f"distance: {distance}, min_drag_distance: {self.min_drag_distance}") 
+                if distance >= self.min_drag_distance:  # 5ピクセル以上のドラッグ 
+                    print(f"Creating new interval from {self.new_interval_start_time} to {self.new_interval_end_time}")
+                    self.newIntervalCreated.emit(self.new_interval_start_time, self.new_interval_end_time, self.timeline_type)  
+            
             self._reset_new_interval_state()  
-            return True  
+            return True
           
         # ドラッグ完了  
         if self.is_dragging and self.dragging_interval:  
