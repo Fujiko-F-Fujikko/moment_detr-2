@@ -1,11 +1,12 @@
 # StepEditor.py  
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,  
                             QLineEdit, QPushButton, QGroupBox, QListWidget,  
-                            QListWidgetItem, QDoubleSpinBox, QMessageBox)  
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt  
+                            QListWidgetItem, QDoubleSpinBox, QApplication)  
+from PyQt6.QtCore import pyqtSignal, QTimer
 from typing import Optional  
   
 from EditCommandFactory import EditCommandFactory  
+from Utilities import show_call_stack
   
 class StepEditor(QWidget):  
     """ステップ編集に特化したエディタークラス"""  
@@ -197,10 +198,11 @@ class StepEditor(QWidget):
         )  
           
         if success:  
-            self._select_newly_added_step(step_text)  
             self.step_text_edit.clear()  
             self.stepAdded.emit()  
-            self.dataChanged.emit()  
+            self.dataChanged.emit()
+            # 最後に選択状態を更新
+            self._select_newly_added_step(step_text)  
       
     def _select_newly_added_step(self, step_text: str):  
         """新しく追加されたステップを選択状態にする"""  
@@ -274,12 +276,14 @@ class StepEditor(QWidget):
           
         # UIを即座に更新  
         self.refresh_step_list()  
-        self._restore_step_selection(new_text if text_changed else old_text, index)  
         self._update_step_edit_ui()  # この行を追加  
         
         # シグナル発信  
         self.stepModified.emit()  
         self.dataChanged.emit() 
+
+        # 最後に選択状態を更新
+        self._restore_step_selection(new_text if text_changed else old_text, index)  
       
     def _apply_segment_changes(self, old_segment: list, new_segment: list, step_text: str):  
         """セグメント変更をタイムラインに適用"""  
@@ -326,7 +330,7 @@ class StepEditor(QWidget):
                 self.step_list.setCurrentItem(item)  
                 item.setSelected(True)  
                 self.step_list.scrollToItem(item, QListWidget.ScrollHint.PositionAtCenter)  
-                # on_step_selectedは呼び出さない（_update_step_edit_uiで処理）  
+                self.on_step_selected(item)  
                 break
       
     def delete_step(self):  
@@ -349,6 +353,7 @@ class StepEditor(QWidget):
     def select_step_by_label(self, step_label: str):  
         """ラベルでステップを選択"""  
         if not self.step_list:  
+            print("Step list is not initialized")
             return  
         
         for i in range(self.step_list.count()):  

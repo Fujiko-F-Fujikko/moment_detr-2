@@ -47,15 +47,7 @@ class StepEditCommand(QUndoCommand):
                 # StepEditorのUIを更新  
                 step_editor = self.main_window.edit_widget_manager.get_step_editor()  
                 step_editor.refresh_step_list()  
-                  
-                # 選択状態を復元  
-                step_editor._restore_step_selection(  
-                    self.interval.label, None  
-                )  
-                  
-                # 全体のUIも更新  
-                self.main_window.edit_widget_manager.refresh_ui()  
-  
+                    
 class StepAddCommand(QUndoCommand):  
     def __init__(self, stt_data_manager, video_name, step_text, segment, main_window, description="Add Step"):  
         super().__init__(description)  
@@ -88,11 +80,8 @@ class StepAddCommand(QUndoCommand):
               
             if hasattr(self.main_window, 'edit_widget_manager'):  
                 step_editor = self.main_window.edit_widget_manager.get_step_editor()  
-                step_editor.refresh_step_list()  
-                  
-                # 新しく追加されたステップを選択  
-                if self.added_step_entry:  
-                    step_editor.select_step_by_label(self.step_text)  
+                step_editor.refresh_step_list()                    
+
   
 class StepDeleteCommand(QUndoCommand):  
     def __init__(self, stt_data_manager, video_name, step_index, main_window, description="Delete Step"):  
