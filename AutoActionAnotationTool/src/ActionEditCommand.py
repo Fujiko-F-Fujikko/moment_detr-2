@@ -21,6 +21,11 @@ class ActionDetailModifyCommand(QUndoCommand):
         if self.main_window:  
             self.main_window.update_display()  
         
+        # TimelineDisplayManagerの更新を追加  
+        if hasattr(self.main_window, 'application_coordinator'):  
+            # ApplicationCoordinatorを通じてTimelineDisplayManagerを更新  
+            self.main_window.application_coordinator.synchronize_timeline_updates()  
+
         if hasattr(self.main_window, 'edit_widget_manager'):  
             action_editor = self.main_window.edit_widget_manager.get_action_editor()  
             

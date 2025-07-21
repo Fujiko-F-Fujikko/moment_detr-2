@@ -84,15 +84,11 @@ class StepAddCommand(QUndoCommand):
 
         # 新しいアーキテクチャではEditWidgetManagerを使用  
         if hasattr(self.main_window, 'edit_widget_manager'):  
-            # ActionEditorのUIを更新  
-            step_editor = self.main_window.edit_widget_manager.get_step_editor()  
-            step_editor.refresh_step_list()  
-            step_editor._update_step_edit_ui()  
-            
-            # 全体のUIも更新  
-            self.main_window.edit_widget_manager.refresh_ui()                    
+            # 全体のUIを更新  
+            self.main_window.edit_widget_manager.refresh_ui()
 
             # 選択状態を復元  
+            step_editor = self.main_window.edit_widget_manager.get_step_editor()  
             step_editor.select_step(  
                 step_text=self.step_text, step_index=None
             )
@@ -127,13 +123,8 @@ class StepDeleteCommand(QUndoCommand):
   
         # 新しいアーキテクチャではEditWidgetManagerを使用  
         if hasattr(self.main_window, 'edit_widget_manager'):  
-            # ActionEditorのUIを更新  
-            step_editor = self.main_window.edit_widget_manager.get_step_editor()  
-            step_editor.refresh_step_list()  
-            step_editor._update_step_edit_ui()  
-              
-            # 全体のUIも更新  
-            self.main_window.edit_widget_manager.refresh_ui()  
+            # 全体のUIを更新  
+            self.main_window.edit_widget_manager.refresh_ui()
   
 class StepTextEditCommand(QUndoCommand):  
     def __init__(self, stt_data_manager, video_name, step_index, old_text, new_text, main_window, description="Modify Step Text"):  
@@ -165,15 +156,11 @@ class StepTextEditCommand(QUndoCommand):
 
         # 新しいアーキテクチャではEditWidgetManagerを使用  
         if hasattr(self.main_window, 'edit_widget_manager'):  
-            # ActionEditorのUIを更新  
-            step_editor = self.main_window.edit_widget_manager.get_step_editor()  
-            step_editor.refresh_step_list()  
-            step_editor._update_step_edit_ui()  
-            
-            # 全体のUIも更新  
-            self.main_window.edit_widget_manager.refresh_ui()                    
+            # 全体のUIを更新  
+            self.main_window.edit_widget_manager.refresh_ui()
 
             # 選択状態を復元  
+            step_editor = self.main_window.edit_widget_manager.get_step_editor()  
             step_editor.select_step(  
-                step_text=self.new_text, step_index=self.step_index  
+                step_text=self.new_text, step_index=None
             )

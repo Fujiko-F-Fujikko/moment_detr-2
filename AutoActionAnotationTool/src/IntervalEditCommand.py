@@ -27,11 +27,7 @@ class IntervalEditCommand(QUndoCommand):
   
         # 新しいアーキテクチャではEditWidgetManagerを使用  
         if hasattr(self.main_window, 'edit_widget_manager'):  
-            # ActionEditorのUIを更新  
-            action_editor = self.main_window.edit_widget_manager.get_action_editor()  
-            action_editor.update_interval_ui()  
-              
-            # 全体のUIも更新  
+            # 全体のUIを更新  
             self.main_window.edit_widget_manager.refresh_ui()  
   
 class IntervalDeleteCommand(QUndoCommand):  

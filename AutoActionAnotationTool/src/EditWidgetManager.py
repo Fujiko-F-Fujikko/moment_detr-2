@@ -160,6 +160,7 @@ class EditWidgetManager(QWidget):
         step_editor = self.get_step_editor()  
         if step_editor:  
             step_editor.refresh_step_list()  
+            step_editor._update_step_edit_ui()
           
         # その他のUI更新処理  
         self.update()  
