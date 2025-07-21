@@ -11,6 +11,8 @@ from Results import DetectionInterval, QueryResults
 from ResultsDisplayManager import ResultsDisplayManager
 from Utilities import show_call_stack  # デバッグ用スタックトレース表示
 from STTDataStructures import QueryParser, QueryValidationError
+from IntervalEditCommand import IntervalAddCommand  
+from StepEditCommand import StepAddCommand
   
 class ApplicationCoordinator(QObject):  
     """コンポーネント間の調整とイベント処理を担当するクラス"""  
@@ -318,7 +320,13 @@ class ApplicationCoordinator(QObject):
                     step_text = f"New Step {steps_count + 1}"  
                 else:  
                     step_text = "New Step 1"
-                self.stt_data_controller.add_step(video_name, step_text, [start_time, end_time])  
+
+                # 直接コマンドを作成  
+                command = StepAddCommand(  
+                    self.stt_data_controller, video_name, step_text, [start_time, end_time], self.main_window  
+                )  
+                if hasattr(self.main_window, 'undo_stack'):  
+                    self.main_window.undo_stack.push(command)
         else:  
             # Action用の新規区間作成処理  
             if self.current_query_results and self.edit_widget_manager:  
@@ -338,7 +346,6 @@ class ApplicationCoordinator(QObject):
                     new_interval.query_result = target_query_result  
                     
                     # 新しいコマンドシステムを使用  
-                    from IntervalEditCommand import IntervalAddCommand  
                     command = IntervalAddCommand(target_query_result, new_interval, self.main_window)  
                     
                     if hasattr(self.main_window, 'undo_stack'):  
