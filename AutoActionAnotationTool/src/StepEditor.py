@@ -302,10 +302,9 @@ class StepEditor(QWidget):
           
         index = current_item.data(1)  
           
-        command = self.command_factory.create_step_delete_command(  
+        self.command_factory.create_and_execute_step_delete(  
             self.stt_data_manager, self.current_video_name, index  
         )  
-        self.command_factory.execute_command(command)  
           
         # シグナル発信  
         self.stepDeleted.emit()  

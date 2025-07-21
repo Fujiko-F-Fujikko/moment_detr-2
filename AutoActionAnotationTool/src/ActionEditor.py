@@ -349,7 +349,7 @@ class ActionEditor(QWidget):
         
         index = self.current_query_result.relevant_windows.index(self.selected_interval)  
           
-        ret = self.command_factory.create_and_execute_interval_delete(  
+        self.command_factory.create_and_execute_interval_delete(  
             self.current_query_result, self.selected_interval, index  
         )  
           
@@ -400,11 +400,9 @@ class ActionEditor(QWidget):
         )  
         new_interval.query_result = self.current_query_result  
           
-        command = self.command_factory.create_interval_add_command(  
+        self.command_factory.create_and_execute_interval_add(  
             self.current_query_result, new_interval  
-        )  
-        self.command_factory.execute_command(command)  
-          
+        )
         # シグナル発信  
         self.intervalAdded.emit()  
         self.dataChanged.emit()  

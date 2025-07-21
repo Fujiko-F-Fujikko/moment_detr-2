@@ -11,8 +11,7 @@ from Results import DetectionInterval, QueryResults
 from ResultsDisplayManager import ResultsDisplayManager
 from Utilities import show_call_stack  # デバッグ用スタックトレース表示
 from STTDataStructures import QueryParser, QueryValidationError
-from IntervalEditCommand import IntervalAddCommand  
-from StepEditCommand import StepAddCommand
+from EditCommandFactory import EditCommandFactory
   
 class ApplicationCoordinator(QObject):  
     """コンポーネント間の調整とイベント処理を担当するクラス"""  
@@ -39,6 +38,9 @@ class ApplicationCoordinator(QObject):
         # 状態管理  
         self.current_video_path: Optional[str] = None  
         self.current_query_results: list = []  
+
+        # コマンドファクトリー
+        self.command_factory = EditCommandFactory(main_window) if main_window else None
           
         self.setup_connections()  
       
@@ -282,54 +284,44 @@ class ApplicationCoordinator(QObject):
       
     def handle_interval_drag_finished(self, interval: DetectionInterval, new_start: float, new_end: float):  
         """区間ドラッグ完了時の処理"""  
-        # Undo/Redoコマンドを作成  
-        if self.main_window and hasattr(self.main_window, 'undo_stack'):  
+        if self.main_window and hasattr(self.main_window, 'undo_stack') and self.command_factory:  
             old_start = getattr(self.main_window, 'drag_original_start', interval.start_time)  
             old_end = getattr(self.main_window, 'drag_original_end', interval.end_time)  
             
-            # ステップかアクションかを判定してコマンドを作成  
+            # ステップかアクションかを判定してファクトリー経由でコマンドを作成  
             if (hasattr(interval, 'query_result') and   
                 hasattr(interval.query_result, 'query_text') and   
                 interval.query_result.query_text.startswith("Step:")):  
                 
-                from StepEditCommand import StepEditCommand  
-                command = StepEditCommand(  
+                self.command_factory.create_and_execute_step_modify(  
                     interval, old_start, old_end, new_start, new_end,  
-                    self.stt_data_controller,   
-                    self.video_data_controller.get_video_name(),   
-                    self.main_window  
+                    self.stt_data_controller, self.video_data_controller.get_video_name()  
                 )  
             else:  
-                from IntervalEditCommand import IntervalEditCommand  
-                command = IntervalEditCommand(  
-                    interval, old_start, old_end, new_start, new_end, self.main_window  
-                )  
-            
-            self.main_window.undo_stack.push(command)  
+                self.command_factory.create_and_execute_interval_modify(  
+                    interval, old_start, old_end, new_start, new_end  
+                )
     
     def handle_new_interval_created(self, start_time: float, end_time: float, timeline_type: str):  
         """新規区間作成時の処理"""  
         if timeline_type == "Steps":  
             # Step用の新規区間作成処理  
-            # STTデータに新しいステップを追加  
             video_name = self.video_data_controller.get_video_name()  
-            if video_name and self.stt_data_controller:  
+            if video_name and self.stt_data_controller and self.command_factory:  
                 # 新しいステップを作成  
                 if video_name in self.stt_data_controller.stt_dataset.database:  
                     steps_count = len(self.stt_data_controller.stt_dataset.database[video_name].steps)  
                     step_text = f"New Step {steps_count + 1}"  
                 else:  
-                    step_text = "New Step 1"
-
-                # 直接コマンドを作成  
-                command = StepAddCommand(  
-                    self.stt_data_controller, video_name, step_text, [start_time, end_time], self.main_window  
+                    step_text = "New Step 1"  
+                
+                # EditCommandFactoryを使用してUndoコマンドを作成  
+                self.command_factory.create_and_execute_step_add(  
+                    self.stt_data_controller, video_name, step_text, [start_time, end_time]  
                 )  
-                if hasattr(self.main_window, 'undo_stack'):  
-                    self.main_window.undo_stack.push(command)
         else:  
-            # Action用の新規区間作成処理  
-            if self.current_query_results and self.edit_widget_manager:  
+            # Action用の新規区間作成処理（既存のコードを修正）  
+            if self.current_query_results and self.command_factory:  
                 # timeline_typeに基づいて適切なクエリ結果を選択  
                 target_query_result = None  
                 for query_result in self.current_query_results:  
@@ -337,7 +329,6 @@ class ApplicationCoordinator(QObject):
                         target_query_result = query_result  
                         break  
                 
-                # フォールバック: 適切なクエリ結果が見つからない場合は最初の要素を使用  
                 if not target_query_result:  
                     target_query_result = self.current_query_results[0] if self.current_query_results else None  
                 
@@ -345,11 +336,10 @@ class ApplicationCoordinator(QObject):
                     new_interval = DetectionInterval(start_time, end_time, 1.0, 0)  
                     new_interval.query_result = target_query_result  
                     
-                    # 新しいコマンドシステムを使用  
-                    command = IntervalAddCommand(target_query_result, new_interval, self.main_window)  
-                    
-                    if hasattr(self.main_window, 'undo_stack'):  
-                        self.main_window.undo_stack.push(command)
+                    # EditCommandFactoryを使用  
+                    self.command_factory.create_and_execute_interval_add(  
+                        target_query_result, new_interval  
+                    )
       
     def handle_time_position_changed(self, time: float):  
         """時間位置変更時の処理"""  

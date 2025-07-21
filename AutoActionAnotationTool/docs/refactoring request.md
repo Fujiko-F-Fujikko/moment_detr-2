@@ -14,6 +14,6 @@ AutoActionAnnotationToolのリファクタリングをしています。 古い�
 - [ ] 10. キーボードショートカットの復元（Ctrl+Z/Y, Space, <> は実装済）
 - [ ] 11. confidence thresholdを変えて、一度detection resultsリストが空になるとずっと空のまま戻らない
 - [x] 12. Stepの追加のUndoができない。
-- [ ] 13. EditoCommandFactoryを使ってcommandを管理する
+- [x] 13. EditoCommandFactoryを使ってcommandを管理する
 
 古い実装を正として、これらの点に関して古い実装の通りに動作するように修正してください。
