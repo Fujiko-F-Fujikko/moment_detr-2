@@ -340,7 +340,11 @@ class ApplicationCoordinator(QObject):
                     self.command_factory.create_and_execute_interval_add(  
                         target_query_result, new_interval  
                     )
-      
+
+                    # Timeline上でハイライト表示  
+                    if self.timeline_display_manager:  
+                        self.timeline_display_manager.set_highlighted_interval(new_interval)
+
     def handle_time_position_changed(self, time: float):  
         """時間位置変更時の処理"""  
         # タイムライン上でプレイヘッド位置を同期  

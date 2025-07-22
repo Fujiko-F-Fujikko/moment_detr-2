@@ -100,5 +100,8 @@ class IntervalAddCommand(QUndoCommand):
             # EditWidgetManagerの更新  
             if hasattr(self.main_window, 'edit_widget_manager'):  
                 self.main_window.edit_widget_manager.refresh_ui()  
-                # 選択状態をクリア  
-                self.main_window.edit_widget_manager.clear_selection()
+
+                # 新しく追加されたIntervalを選択状態にする  
+                if self.interval in self.query_result.relevant_windows:  
+                    index = self.query_result.relevant_windows.index(self.interval)  
+                    self.main_window.edit_widget_manager.set_selected_interval(self.interval, index)
