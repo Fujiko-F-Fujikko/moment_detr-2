@@ -401,9 +401,11 @@ class TimelineDisplayManager(QWidget):
     def get_timeline_by_type(self, timeline_type: str):  
         """タイプ別にタイムラインを取得"""  
         for widget in self.timeline_widgets:  
-            if hasattr(widget, 'timeline_type') and widget.timeline_type == timeline_type:  
-                return widget  
-        return None  
+            # コンテナ内の実際のTimelineWidgetを検索  
+            timeline_widget = self._find_timeline_widget(widget)  
+            if timeline_widget and hasattr(timeline_widget, 'timeline_type') and timeline_widget.timeline_type == timeline_type:  
+                return timeline_widget  
+        return None
       
     def update_timeline_data(self, timeline_type: str, data):  
         """特定のタイムラインのデータを更新"""  

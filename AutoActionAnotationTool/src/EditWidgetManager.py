@@ -177,3 +177,28 @@ class EditWidgetManager(QWidget):
             'step_editor_state': self.step_editor.get_current_state(),  
             'has_command_factory': self.command_factory is not None  
         }
+
+    def handle_step_selection_from_editor(self, step_text: str, start_time: float, end_time: float):  
+        """StepEditorからのStep選択を処理"""  
+        if self.main_window and hasattr(self.main_window, 'application_coordinator'):  
+            app_coordinator = self.main_window.application_coordinator  
+            timeline_manager = app_coordinator.timeline_display_manager  
+            
+            # StepsタイムラインのTimelineDataを取得  
+            steps_timeline_widget = timeline_manager.get_timeline_by_type("Steps")  
+            if steps_timeline_widget and hasattr(steps_timeline_widget, 'timeline_data'):  
+                timeline_data = steps_timeline_widget.timeline_data  
+                
+                # 該当するDetectionIntervalを検索  
+                found_interval = None  
+                for interval in timeline_data.intervals:  
+                    if (interval.label == step_text and   
+                        interval.start_time == start_time and   
+                        interval.end_time == end_time):  
+                        found_interval = interval  
+                        break  
+                
+                if found_interval:  
+                    app_coordinator.handle_timeline_interval_clicked(  
+                        found_interval, found_interval.query_result  
+                    )

@@ -16,7 +16,7 @@ AutoActionAnnotationToolのリファクタリングをしています。 古い�
 - [x] 12. Stepの追加のUndoができない。
 - [x] 13. EditoCommandFactoryを使ってcommandを管理する
 - [x] 14. Actionを編集した結果がTimeline上のQueries:...の後の文字列に即時反映されない。
-- [ ] 15. Stepリスト上でStepを選択してもTimeline上で該当するStepが選択状態にならない。
+- [x] 15. Step TabのStepリスト上でStepを選択してもTimeline上で該当するStepが選択状態にならない。
 - [ ] 16. 操作AをUndoする->操作Bをする->操作BをUndoする　としたとき、操作AのUndoをRedoできなくなる。スタックから消えてしまう？
 
 古い実装を正として、これらの点に関して古い実装の通りに動作するように修正してください。

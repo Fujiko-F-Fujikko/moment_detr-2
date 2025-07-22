@@ -37,6 +37,8 @@ class StepEditor(QWidget):
           
         # タイマー（連続入力防止用）  
         self._step_timer: Optional[QTimer] = None  
+
+        self._is_selecting_step = False
           
         self.setup_ui()  
       
@@ -155,13 +157,13 @@ class StepEditor(QWidget):
       
     def on_step_selected(self, item: QListWidgetItem):  
         """ステップ選択時の処理"""  
-        if not self.stt_data_manager or not self.current_video_name:  
+        if self._is_selecting_step:  
             return  
-          
-        # シグナルを一時的に無効化  
-        self._block_signals(True)  
-          
+        
+        self._is_selecting_step = True  
+        
         try:  
+            # 既存のUI更新処理  
             index = item.data(1)  
             video_data = self.stt_data_manager.stt_dataset.database[self.current_video_name]  
             step = video_data.steps[index]  
@@ -170,10 +172,16 @@ class StepEditor(QWidget):
             if len(step.segment) >= 2:  
                 self.step_start_spin.setValue(step.segment[0])  
                 self.step_end_spin.setValue(step.segment[1])  
-          
+            
+            # EditWidgetManagerに委譲  
+            if hasattr(self.main_window, 'edit_widget_manager'):  
+                self.main_window.edit_widget_manager.handle_step_selection_from_editor(  
+                    step.step, step.segment[0], step.segment[1]  
+                )  
         finally:  
             # シグナルを再有効化  
             self._block_signals(False)  
+            self._is_selecting_step = False
       
     def _block_signals(self, block: bool):  
         """シグナルのブロック/アンブロック"""  
