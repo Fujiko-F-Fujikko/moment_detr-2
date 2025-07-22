@@ -12,11 +12,11 @@ AutoActionAnnotationToolのリファクタリングをしています。 古い�
 - [x] 8. Actionタブ上で、Add Intervalボタンが効かない
 - [x] 9. Stepタブ上で、start/endの時間の変更が効かない。入力⇒Enter設楽元の数字に戻る
 - [ ] 10. キーボードショートカットの復元（Ctrl+Z/Y, Space, <> は実装済）
-- [ ] 11. confidence thresholdを変えて、一度detection resultsリストが空になるとずっと空のまま戻らない
+- [x] 11. confidence thresholdを変えて、一度detection resultsリストが空になるとずっと空のまま戻らない
 - [x] 12. Stepの追加のUndoができない。
 - [x] 13. EditoCommandFactoryを使ってcommandを管理する
 - [x] 14. Actionを編集した結果がTimeline上のQueries:...の後の文字列に即時反映されない。
 - [x] 15. Step TabのStepリスト上でStepを選択してもTimeline上で該当するStepが選択状態にならない。
-- [ ] 16. 操作AをUndoする->操作Bをする->操作BをUndoする　としたとき、操作AのUndoをRedoできなくなる。スタックから消えてしまう？
+- [ ] 16. 操作AをUndoする->操作Bをする->操作BをUndoする　としたとき、操作AのUndoをRedoできなくなる。スタックから消えてしまう？ ⇒ PyQt6のQUndoStackの標準的な動作によるものらしい。
 
 古い実装を正として、これらの点に関して古い実装の通りに動作するように修正してください。

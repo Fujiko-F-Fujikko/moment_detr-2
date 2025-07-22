@@ -105,16 +105,16 @@ class ResultsDataController(QObject):
                 if interval.confidence_score >= threshold  
             ]  
             
-            if filtered_intervals:  
-                # 新しいQueryResultsオブジェクトを作成（video_idを追加）  
-                filtered_result = QueryResults(  
-                    query_text=result.query_text,  
-                    video_id=result.video_id,  # この行を追加  
-                    relevant_windows=filtered_intervals,  
-                    saliency_scores=result.saliency_scores,  
-                    query_id=result.query_id  
-                )  
-                filtered_results.append(filtered_result)  
+            # 新しいQueryResultsオブジェクトを作成（video_idを追加）  
+            # 信頼度閾値を満たす区間がない場合でも、空のQueryResultsを保持
+            filtered_result = QueryResults(  
+                query_text=result.query_text,  
+                video_id=result.video_id,
+                relevant_windows=filtered_intervals, # 空のリストでも保持
+                saliency_scores=result.saliency_scores,  
+                query_id=result.query_id  
+            )  
+            filtered_results.append(filtered_result)  
         
         return filtered_results 
       
