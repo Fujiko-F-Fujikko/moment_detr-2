@@ -100,10 +100,8 @@ class TimelineInteractionHandler(QObject):
       
     def handle_mouse_release(self, event: QMouseEvent, timeline_data: 'TimelineData', widget_width: int) -> bool:  
         """マウスリリースイベントを処理"""  
-        show_call_stack()  # デバッグ用
         # 新規区間作成完了（ドラッグ距離チェック付き）  
         if self.is_creating_new_interval:  
-            print(f"New interval creation in progress: {self.new_interval_start_time} to {self.new_interval_end_time}")
             # 実際にドラッグが行われた場合のみ新規区間を作成  
             if (self.new_interval_end_time is not None and   
                 hasattr(self, 'new_interval_start_pos') and   
@@ -111,12 +109,10 @@ class TimelineInteractionHandler(QObject):
                 
                 # 最小ドラッグ距離をチェック  
                 distance = abs(event.position().x() - self.new_interval_start_pos)  
-                print(f"distance: {distance}, min_drag_distance: {self.min_drag_distance}") 
-                if distance >= self.min_drag_distance:  # 5ピクセル以上のドラッグ 
-                    print(f"Creating new interval from {self.new_interval_start_time} to {self.new_interval_end_time}")
-                    self.newIntervalCreated.emit(self.new_interval_start_time, self.new_interval_end_time, self.timeline_type)  
-            
-            self._reset_new_interval_state(timeline_data)  
+                if distance >= self.min_drag_distance:  # 5ピクセル以上のドラッグ
+                    self.newIntervalCreated.emit(self.new_interval_start_time, self.new_interval_end_time, self.timeline_type)
+
+            self._reset_new_interval_state(timeline_data)
             return True
           
         # ドラッグ完了  

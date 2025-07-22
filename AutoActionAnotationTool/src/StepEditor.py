@@ -216,7 +216,6 @@ class StepEditor(QWidget):
             
     def on_step_value_changed(self):  
         """Step値が変更された時の即時処理"""  
-        print("on_step_value_changed called")  # デバッグ用  
         
         # 連続入力を防ぐため遅延処理  
         if self._step_timer and self._step_timer.isActive():  
@@ -226,14 +225,11 @@ class StepEditor(QWidget):
         self._step_timer.setSingleShot(True)  
         self._step_timer.timeout.connect(self.apply_step_changes)  
         self._step_timer.start(500)  # 500ms後に適用  
-        print("Timer started")  # デバッグ用   
       
     def apply_step_changes(self):  
         """ステップ変更を適用"""  
-        print("apply_step_changes called")  # デバッグ用
         current_item = self.step_list.currentItem()  
         if not current_item or not self.stt_data_manager or not self.current_video_name or not self.command_factory:  
-            print("Early return due to missing conditions")  # デバッグ用 
             return  
           
         index = current_item.data(1)  
