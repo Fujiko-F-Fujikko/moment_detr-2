@@ -229,8 +229,17 @@ class MainApplicationWindow(QMainWindow):
             selected_interval = interval if interval else query_result.relevant_windows[0]  
             selected_index = index if interval else 0  
             
-            # 編集ウィジェットを直接更新  
-            self.application_coordinator.edit_widget_manager.set_current_query_results(query_result)  
+            # 重要：現在のAction Editorの状態を保存  
+            current_editor = self.application_coordinator.edit_widget_manager.get_action_editor()  
+            if current_editor and current_editor.current_query_result == query_result:  
+                # 同じQueryResultの場合、現在の編集状態を保持  
+                # query_resultを上書きしない  
+                pass  
+            else:  
+                # 異なるQueryResultの場合のみ更新  
+                self.application_coordinator.edit_widget_manager.set_current_query_results(query_result)  
+            
+            # 選択された区間を設定  
             self.application_coordinator.edit_widget_manager.set_selected_interval(selected_interval, selected_index)  
             
             # Timeline上でハイライト  

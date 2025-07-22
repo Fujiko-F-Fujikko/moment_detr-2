@@ -25,7 +25,17 @@ class ActionDetailModifyCommand(QUndoCommand):
         if hasattr(self.main_window, 'application_coordinator'):  
             # ApplicationCoordinatorを通じてTimelineDisplayManagerを更新  
             self.main_window.application_coordinator.synchronize_timeline_updates()  
-
+            
+            # 重要：ResultsDataControllerの再フィルタリングを強制実行  
+            coordinator = self.main_window.application_coordinator  
+            results_controller = coordinator.get_results_data_controller()  
+            if results_controller:  
+                results_controller._apply_current_filters()  # フィルタ再適用  
+            
+            # 完全なコンポーネント同期を実行  
+            coordinator.synchronize_components()  
+    
+        # EditWidgetManagerの状態保持処理（既存のコード）  
         if hasattr(self.main_window, 'edit_widget_manager'):  
             action_editor = self.main_window.edit_widget_manager.get_action_editor()  
             

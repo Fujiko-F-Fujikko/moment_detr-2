@@ -33,7 +33,9 @@ class ActionEditor(QWidget):
         # 初期化状態フラグ  
         self._is_initializing = True  
         self._signals_connected = False  
-          
+        # 編集状態フラグ
+        self._editing_in_progress = False
+
         # UIを構築  
         self._build_ui()  
           
@@ -140,9 +142,15 @@ class ActionEditor(QWidget):
         """現在のクエリ結果を設定"""  
         if self._is_initializing:  
             return  
-          
+        
+        # 重要：同じQueryResultで既に編集中の場合は上書きしない  
+        if (self.current_query_result and   
+            self.current_query_result == query_result and  
+            hasattr(self, '_editing_in_progress') and self._editing_in_progress):  
+            return  
+        
         self.current_query_result = query_result  
-        self.clear_selection()  
+        self.clear_selection()
       
     def set_selected_interval(self, interval: DetectionInterval, index: int):  
         """選択された区間を設定"""  
@@ -265,6 +273,9 @@ class ActionEditor(QWidget):
         if self._is_initializing:  
             return  
           
+        # 編集中フラグを設定  
+        self._editing_in_progress = True  
+
         # 連続入力を防ぐため遅延処理  
         if self._action_timer and self._action_timer.isActive():  
             self._action_timer.stop()  
