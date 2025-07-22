@@ -1,7 +1,6 @@
 # MainApplicationWindow.py (リファクタリング版)  
 import sys  
 import argparse  
-from pathlib import Path  
   
 from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QDialog  
 from PyQt6.QtGui import QAction, QUndoStack, QKeySequence, QShortcut  

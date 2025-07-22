@@ -1,6 +1,6 @@
 # VideoPlayerController.py (新アーキテクチャ版)  
 import os  
-from PyQt6.QtWidgets import QPushButton, QSlider, QLabel, QHBoxLayout, QVBoxLayout, QMessageBox  
+from PyQt6.QtWidgets import QPushButton, QSlider, QLabel, QHBoxLayout
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal, QObject  
 from PyQt6.QtMultimedia import QMediaPlayer  
 from PyQt6.QtMultimediaWidgets import QVideoWidget  

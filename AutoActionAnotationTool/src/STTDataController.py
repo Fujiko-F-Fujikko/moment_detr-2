@@ -1,13 +1,12 @@
 # STTDataController.py (完全版)  
 import json  
 from pathlib import Path  
-from typing import Dict, List, Optional  
-from datetime import datetime  
+from typing import Dict, List
 from dataclasses import asdict  
 from PyQt6.QtCore import QObject, pyqtSignal  
   
 from STTDataStructures import *  
-from Results import QueryResults, InferenceResults  
+from Results import QueryResults  
 from VideoInfo import VideoInfo  
   
 class STTDataController(QObject):  

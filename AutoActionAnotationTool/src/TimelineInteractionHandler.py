@@ -2,7 +2,7 @@
 from PyQt6.QtCore import QObject, pyqtSignal, QPointF  
 from PyQt6.QtGui import QCursor, QMouseEvent  
 from PyQt6.QtCore import Qt  
-from typing import List, Optional, Tuple  
+from typing import List, Optional  
 
 from DetectionInterval import DetectionInterval  
 from TimelineData import NewIntervalPreview, TimelineData

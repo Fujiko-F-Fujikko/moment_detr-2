@@ -1,7 +1,6 @@
 # TimelineRenderer.py  
 from PyQt6.QtGui import QPainter, QColor, QPen  
 from PyQt6.QtCore import QRect, Qt  
-from typing import List, Optional  
 from DetectionInterval import DetectionInterval  
 from TimelineData import TimelineData
   

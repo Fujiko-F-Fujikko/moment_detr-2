@@ -1,7 +1,6 @@
 # STTExportDialog.py  
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,   
                             QComboBox, QPushButton, QScrollArea, QWidget)  
-from PyQt6.QtCore import Qt  
 from typing import List, Dict  
   
 class STTExportDialog(QDialog):  

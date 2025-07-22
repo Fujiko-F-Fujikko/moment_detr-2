@@ -1,7 +1,7 @@
 # TimelineDisplayManager.py (Phase 3修正版)  
 from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QLabel    
-from PyQt6.QtCore import pyqtSignal, QObject    
-from typing import List, Dict, Optional, Any    
+from PyQt6.QtCore import pyqtSignal    
+from typing import List, Dict, Optional    
     
 from TimelineRenderer import TimelineRenderer    
 from TimelineInteractionHandler import TimelineInteractionHandler    

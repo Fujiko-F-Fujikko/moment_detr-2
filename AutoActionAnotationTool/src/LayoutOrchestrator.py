@@ -1,6 +1,5 @@
 # LayoutOrchestrator.py  
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter,   
-                            QScrollArea, QLabel)  
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSplitter
 from PyQt6.QtCore import Qt, QObject  
 from typing import Dict, Any, Optional  
   
