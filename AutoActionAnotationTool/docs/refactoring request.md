@@ -4,7 +4,7 @@ AutoActionAnnotationToolのリファクタリングをしています。 古い�
 今わかっているのは以下です。
 - [x] 1. DetectionResultsに表示される要素をクリックすると、各クエリの2番目以降の要素を選択してもTimeline上やActionEditタブ上では1番目の要素が選択されてしまう。
 - [x] 2. StepEditタブで、AddStepボタンで新規追加したり、Steps一覧ででいずれかの要素を選択してプロパティを変更した後に、編集していた要素への選択状態が外れてしまう。
-- [ ] 3. Timeline上でドラッグして新規Interval追加する機能がなくなっている（Step/Edit 両方）
+- [x] 3. Timeline上でドラッグして新規Interval追加する機能がなくなっている（Step/Edit 両方）
 - [x] 4. Timeline上でドラッグしてIntervalの位置を変更する機能がおかしい（Step/Edit 両方）
 - [x] 5. Timeline上でマウスボタンを押した後、ドラッグ操作できるときにマウスカーソルが変わらない（元の使用では矢印カーソルになったり手カーソルになったりするはず）
 - [x] 6. Action/Step両方のEditタブ上で、テキストボックスに入力して確定しても変更が反映されない

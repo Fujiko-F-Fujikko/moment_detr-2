@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt
 from typing import List, Optional, Tuple  
 
 from DetectionInterval import DetectionInterval  
-from TimelineData import TimelineData
+from TimelineData import NewIntervalPreview, TimelineData
 from Utilities import show_call_stack
   
 class TimelineInteractionHandler(QObject):  
@@ -66,7 +66,7 @@ class TimelineInteractionHandler(QObject):
             return True  
         else:  
             # 空白領域での新規区間作成開始  
-            self._start_new_interval_creation(click_time, click_x)  
+            self._start_new_interval_creation(click_time, click_x, timeline_data)  
             self.timePositionChanged.emit(click_time)  
             return True  
       
@@ -79,7 +79,7 @@ class TimelineInteractionHandler(QObject):
           
         # 新規区間作成中の処理  
         if self.is_creating_new_interval:  
-            self._update_new_interval_preview(current_time)  
+            self._update_new_interval_preview(current_time, timeline_data)  
             return True  
           
         # ドラッグ準備状態からの移行チェック  
@@ -116,7 +116,7 @@ class TimelineInteractionHandler(QObject):
                     print(f"Creating new interval from {self.new_interval_start_time} to {self.new_interval_end_time}")
                     self.newIntervalCreated.emit(self.new_interval_start_time, self.new_interval_end_time, self.timeline_type)  
             
-            self._reset_new_interval_state()  
+            self._reset_new_interval_state(timeline_data)  
             return True
           
         # ドラッグ完了  
@@ -128,7 +128,7 @@ class TimelineInteractionHandler(QObject):
             return True  
           
         # 状態リセット  
-        self._reset_all_states()  
+        self._reset_all_states(timeline_data)  
         return False  
       
     def _find_interval_at_position(self, click_time: float, intervals: List[DetectionInterval],   
@@ -164,18 +164,24 @@ class TimelineInteractionHandler(QObject):
         self.drag_start_pos = QPointF(click_x, 0)  
         self.drag_start_time = click_time  
       
-    def _start_new_interval_creation(self, click_time: float, click_x: float):  
+    def _start_new_interval_creation(self, click_time: float, click_x: float, timeline_data: 'TimelineData'):  
         """新規区間作成を開始"""  
         self.is_creating_new_interval = True  
+        timeline_data.is_creating_new_interval = True
         self.new_interval_start_time = click_time  
         self.new_interval_start_pos = click_x  
         self.cursorChanged.emit(QCursor(Qt.CursorShape.CrossCursor))  
       
-    def _update_new_interval_preview(self, current_time: float):  
+    def _update_new_interval_preview(self, current_time: float, timeline_data: 'TimelineData'):  
         """新規区間プレビューを更新"""  
         if self.new_interval_start_time is not None:  
             self.new_interval_end_time = max(current_time, self.new_interval_start_time + self.min_interval_duration)  
-      
+            # ここでtimeline_dataのnew_interval_previewを更新  
+            timeline_data.new_interval_preview = NewIntervalPreview(  
+                start_time=min(self.new_interval_start_time, self.new_interval_end_time),  
+                end_time=max(self.new_interval_start_time, self.new_interval_end_time)  
+            )
+
     def _check_drag_start_threshold(self, event: QMouseEvent) -> bool:  
         """ドラッグ開始閾値をチェック"""  
         if (self.potential_dragging_interval and not self.is_dragging and self.drag_start_pos):  
@@ -329,12 +335,14 @@ class TimelineInteractionHandler(QObject):
         else:  
             return 60.0  # 1分間隔  
       
-    def _reset_new_interval_state(self):  
+    def _reset_new_interval_state(self, timeline_data: 'TimelineData'):  
         """新規区間作成状態をリセット"""  
         self.is_creating_new_interval = False  
+        timeline_data.is_creating_new_interval = False
         self.new_interval_start_time = None  
         self.new_interval_start_pos = None  
         self.new_interval_end_time = None  
+        timeline_data.new_interval_preview = None
         self.cursorChanged.emit(QCursor(Qt.CursorShape.ArrowCursor))  
       
     def _reset_drag_state(self):  
@@ -349,9 +357,9 @@ class TimelineInteractionHandler(QObject):
         self.original_end_time = None  
         self.cursorChanged.emit(QCursor(Qt.CursorShape.ArrowCursor))  
       
-    def _reset_all_states(self):  
+    def _reset_all_states(self, timeline_data: 'TimelineData'):  
         """全ての状態をリセット"""  
-        self._reset_new_interval_state()  
+        self._reset_new_interval_state(timeline_data)  
         self._reset_drag_state()  
       
     def get_current_state(self) -> dict:  
