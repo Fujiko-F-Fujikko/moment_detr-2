@@ -2,6 +2,7 @@
 from PyQt6.QtCore import QObject, pyqtSignal  
 from typing import Optional, Dict, Any  
   
+from VideoPlayerController import VideoPlayerController
 from VideoDataController import VideoDataController  
 from ResultsDataController import ResultsDataController  
 from STTDataController import STTDataController  
@@ -33,7 +34,7 @@ class ApplicationCoordinator(QObject):
         # UI管理コンポーネント  
         self.timeline_display_manager: Optional[TimelineDisplayManager] = None  
         self.edit_widget_manager: Optional[EditWidgetManager] = None  
-        self.video_player_controller: Optional[VideoDataController] = None  
+        self.video_player_controller: Optional[VideoPlayerController] = None  
           
         # 状態管理  
         self.current_video_path: Optional[str] = None  
@@ -54,7 +55,7 @@ class ApplicationCoordinator(QObject):
       
     def set_ui_components(self, timeline_display_manager: TimelineDisplayManager,  
                          edit_widget_manager: EditWidgetManager,  
-                         video_player_controller: VideoDataController,
+                         video_player_controller: VideoPlayerController,
                          results_display_manager: ResultsDisplayManager):  
         """UI管理コンポーネントを設定"""  
         self.timeline_display_manager = timeline_display_manager  
@@ -350,7 +351,11 @@ class ApplicationCoordinator(QObject):
         # タイムライン上でプレイヘッド位置を同期  
         if self.timeline_display_manager:  
             self.timeline_display_manager.update_playhead_position(time)  
-      
+
+        # 動画プレイヤーをseek  
+        if self.video_player_controller:  
+            self.video_player_controller.seek_to_time(time)      
+
     def handle_video_position_changed(self, position: float):  
         """動画位置変更時の処理"""  
         # タイムライン上でプレイヘッド位置を同期  

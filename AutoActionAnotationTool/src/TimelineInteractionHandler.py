@@ -181,6 +181,8 @@ class TimelineInteractionHandler(QObject):
                 start_time=min(self.new_interval_start_time, self.new_interval_end_time),  
                 end_time=max(self.new_interval_start_time, self.new_interval_end_time)  
             )
+            # 動画seek用のシグナルを発信  
+            self.timePositionChanged.emit(current_time)
 
     def _check_drag_start_threshold(self, event: QMouseEvent) -> bool:  
         """ドラッグ開始閾値をチェック"""  
@@ -254,6 +256,8 @@ class TimelineInteractionHandler(QObject):
             self.dragging_interval.start_time = new_start  
             self.dragging_interval.end_time = new_end  
             self.intervalDragMoved.emit(self.dragging_interval, new_start, new_end)  
+            # 動画seek用のシグナルを発信  
+            self.timePositionChanged.emit(current_time)
         else:  
             self.cursorChanged.emit(QCursor(Qt.CursorShape.ForbiddenCursor))  
       
