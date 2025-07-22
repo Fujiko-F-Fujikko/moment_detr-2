@@ -130,20 +130,24 @@ class MainApplicationWindow(QMainWindow):
         file_menu = menubar.addMenu('File')  
           
         open_video_action = QAction('Open Video', self)  
+        open_video_action.setShortcut(QKeySequence.StandardKey.Open)  # Ctrl+O  
         open_video_action.triggered.connect(lambda: self.file_manager.open_video_dialog(self))  
         file_menu.addAction(open_video_action)  
           
         load_results_action = QAction('Load Inference Results', self)  
+        load_results_action.setShortcut(QKeySequence("Ctrl+L"))  # Ctrl+L    
         load_results_action.triggered.connect(lambda: self.file_manager.load_inference_results_dialog(self))  
         file_menu.addAction(load_results_action)  
           
         file_menu.addSeparator()  
           
         export_stt_action = QAction('Export STT Dataset', self)  
+        export_stt_action.setShortcut(QKeySequence("Ctrl+E"))  # Ctrl+E  
         export_stt_action.triggered.connect(self.export_stt_dataset)  
         file_menu.addAction(export_stt_action)  
           
         save_results_action = QAction('Save Results', self)  
+        save_results_action.setShortcut(QKeySequence.StandardKey.Save)  # Ctrl+S
         save_results_action.triggered.connect(self.save_results)  
         file_menu.addAction(save_results_action)  
           
@@ -152,13 +156,13 @@ class MainApplicationWindow(QMainWindow):
           
         # Undoアクション  
         undo_action = self.undo_stack.createUndoAction(self, "Undo")  
-        undo_action.setShortcut(QKeySequence.StandardKey.Undo)  
+        undo_action.setShortcut(QKeySequence.StandardKey.Undo)  # Ctrl+Z
         undo_action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)  
         edit_menu.addAction(undo_action)  
           
         # Redoアクション  
         redo_action = self.undo_stack.createRedoAction(self, "Redo")  
-        redo_action.setShortcut(QKeySequence.StandardKey.Redo)  
+        redo_action.setShortcut(QKeySequence.StandardKey.Redo)  # Ctrl+Y
         redo_action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)  
         edit_menu.addAction(redo_action)  
           

@@ -11,7 +11,7 @@ AutoActionAnnotationToolのリファクタリングをしています。 古い�
 - [x] 7. Action/Step両方のEditタブ上で、Delete Intervalボタンが効かない
 - [x] 8. Actionタブ上で、Add Intervalボタンが効かない
 - [x] 9. Stepタブ上で、start/endの時間の変更が効かない。入力⇒Enter設楽元の数字に戻る
-- [ ] 10. キーボードショートカットの復元（Ctrl+Z/Y, Space, <> は実装済）
+- [x] 10. キーボードショートカットの復元（Ctrl+Z/Y, Space, <> は実装済）
 - [x] 11. confidence thresholdを変えて、一度detection resultsリストが空になるとずっと空のまま戻らない
 - [x] 12. Stepの追加のUndoができない。
 - [x] 13. EditoCommandFactoryを使ってcommandを管理する
