@@ -134,7 +134,19 @@ class TimelineDisplayManager(QWidget):
         container_layout.addWidget(timeline_widget)    
             
         # クエリリスト表示    
-        query_list_label = QLabel(f"Queries: {', '.join([q.query_text for q in query_results])}")    
+        # タイムライン上のすべてのIntervalからquery_textを収集  
+        all_intervals = []  
+        for query_result in query_results:  
+            intervals = query_result.relevant_windows if hasattr(query_result, 'relevant_windows') else []  
+            all_intervals.extend(intervals)  
+        
+        # 各Intervalの独立したquery_textを収集  
+        unique_query_texts = set()  
+        for interval in all_intervals:  
+            if hasattr(interval, 'query_result') and hasattr(interval.query_result, 'query_text'):  
+                unique_query_texts.add(interval.query_result.query_text)  
+        
+        query_list_label = QLabel(f"Queries: {', '.join(sorted(unique_query_texts))}")
         query_list_label.setStyleSheet("font-size: 10px; color: #666; padding: 2px;")    
         query_list_label.setWordWrap(True)    
         container_layout.addWidget(query_list_label)    
@@ -164,11 +176,15 @@ class TimelineDisplayManager(QWidget):
         timeline_widget = self._create_timeline_widget("Steps", [], step_intervals)    
         container_layout.addWidget(timeline_widget)    
             
-        # Steps一覧表示    
-        if step_intervals:    
-            steps_list_label = QLabel(f"Steps: {', '.join([interval.label for interval in step_intervals])}")    
-        else:    
-            steps_list_label = QLabel("Steps: No steps defined")    
+        # Steps一覧表示 各Intervalのquery_textから生成  
+        if step_intervals:  
+            query_texts = []  
+            for interval in step_intervals:  
+                if hasattr(interval, 'query_result') and hasattr(interval.query_result, 'query_text'):  
+                    query_texts.append(interval.query_result.query_text)  
+            steps_list_label = QLabel(f"Steps: {', '.join(query_texts)}")  
+        else:  
+            steps_list_label = QLabel("Steps: No steps defined")
             
         steps_list_label.setStyleSheet("font-size: 10px; color: #666; padding: 2px;")    
         steps_list_label.setWordWrap(True)    
@@ -204,12 +220,23 @@ class TimelineDisplayManager(QWidget):
                 # データ設定    
                 if step_intervals:    
                     self.timeline_data.intervals = step_intervals    
-                elif query_results:    
-                    all_intervals = []    
-                    for query_result in query_results:    
-                        intervals = query_result.relevant_windows if hasattr(query_result, 'relevant_windows') else []    
-                        all_intervals.extend(intervals)    
-                    self.timeline_data.intervals = all_intervals    
+                elif query_results:  
+                    all_intervals = []  
+                    for query_result in query_results:  
+                        intervals = query_result.relevant_windows if hasattr(query_result, 'relevant_windows') else []  
+                        # 各Intervalが独立したQueryResultsを持つことを確認  
+                        for interval in intervals:  
+                            if hasattr(interval, 'query_result') and interval.query_result:  
+                                # Intervalが独立したQueryResultsを持っている場合はそのまま使用  
+                                all_intervals.append(interval)  
+                            else:  
+                                # 古い形式の場合は、独立したQueryResultsを作成  
+                                import copy  
+                                independent_query_result = copy.deepcopy(query_result)  
+                                independent_query_result.relevant_windows = [interval]  
+                                interval.query_result = independent_query_result  
+                                all_intervals.append(interval)  
+                    self.timeline_data.intervals = all_intervals
                     
                 self.setMinimumHeight(50)    
                 self.setMaximumHeight(75)    

@@ -303,47 +303,66 @@ class ApplicationCoordinator(QObject):
                     interval, old_start, old_end, new_start, new_end  
                 )
     
-    def handle_new_interval_created(self, start_time: float, end_time: float, timeline_type: str):  
-        """新規区間作成時の処理"""  
-        if timeline_type == "Steps":  
-            # Step用の新規区間作成処理  
-            video_name = self.video_data_controller.get_video_name()  
-            if video_name and self.stt_data_controller and self.command_factory:  
-                # 新しいステップを作成  
-                if video_name in self.stt_data_controller.stt_dataset.database:  
-                    steps_count = len(self.stt_data_controller.stt_dataset.database[video_name].steps)  
-                    step_text = f"New Step {steps_count + 1}"  
-                else:  
-                    step_text = "New Step 1"  
+    def handle_new_interval_created(self, start_time: float, end_time: float, timeline_type: str):    
+        """新規区間作成時の処理"""    
+        if timeline_type == "Steps":    
+            # Step用の新規区間作成処理    
+            video_name = self.video_data_controller.get_video_name()    
+            if video_name and self.stt_data_controller and self.command_factory:    
+                # 新しいステップを作成    
+                if video_name in self.stt_data_controller.stt_dataset.database:    
+                    steps_count = len(self.stt_data_controller.stt_dataset.database[video_name].steps)    
+                    step_text = f"New Step {steps_count + 1}"    
+                else:    
+                    step_text = "New Step 1"    
                 
-                # EditCommandFactoryを使用してUndoコマンドを作成  
-                self.command_factory.create_and_execute_step_add(  
-                    self.stt_data_controller, video_name, step_text, [start_time, end_time]  
-                )  
+                # EditCommandFactoryを使用してUndoコマンドを作成    
+                self.command_factory.create_and_execute_step_add(    
+                    self.stt_data_controller, video_name, step_text, [start_time, end_time]    
+                )    
         else:  
-            # Action用の新規区間作成処理（既存のコードを修正）  
+            # Action用の新規区間作成処理（修正版）  
             if self.current_query_results and self.command_factory:  
-                # timeline_typeに基づいて適切なクエリ結果を選択  
-                target_query_result = None  
-                for query_result in self.current_query_results:  
-                    if timeline_type in query_result.query_text or timeline_type == "RightHand":  
-                        target_query_result = query_result  
-                        break  
+                # 現在選択されているIntervalのQueryResultsを優先的に使用  
+                source_query_result = None  
                 
-                if not target_query_result:  
-                    target_query_result = self.current_query_results[0] if self.current_query_results else None  
+                # EditWidgetManagerから現在選択されているIntervalを取得  
+                if self.edit_widget_manager:  
+                    action_editor = self.edit_widget_manager.get_action_editor()  
+                    if (action_editor and action_editor.selected_interval and   
+                        hasattr(action_editor.selected_interval, 'query_result')):  
+                        source_query_result = action_editor.selected_interval.query_result  
                 
-                if target_query_result:  
-                    new_interval = DetectionInterval(start_time, end_time, 1.0, 0)  
-                    new_interval.query_result = target_query_result  
+                # 選択されているIntervalがない場合は従来の方法  
+                if not source_query_result:  
+                    for query_result in self.current_query_results:  
+                        if timeline_type in query_result.query_text or timeline_type == "RightHand":  
+                            source_query_result = query_result  
+                            break  
                     
-                    # EditCommandFactoryを使用  
-                    self.command_factory.create_and_execute_interval_add(  
-                        target_query_result, new_interval  
-                    )
+                    if not source_query_result:  
+                        source_query_result = self.current_query_results[0] if self.current_query_results else None  
 
-                    # Timeline上でハイライト表示  
-                    if self.timeline_display_manager:  
+                if source_query_result:  
+                    # 独立したQueryResultsを作成  
+                    import copy  
+                    independent_query_result = copy.deepcopy(source_query_result)  
+                    
+                    new_interval = DetectionInterval(start_time, end_time, 1.0, 0)    
+                    # relevant_windowsを空にする 
+                    independent_query_result.relevant_windows = []
+                    new_interval.query_result = independent_query_result    
+
+                    # 新しいQueryResultsをcurrent_query_resultsに追加  
+                    self.current_query_results.append(independent_query_result)
+
+                    # EditCommandFactoryを使用    
+                    self.command_factory.create_and_execute_interval_add(    
+                        independent_query_result, new_interval    
+                    )  
+    
+                    # Timeline上でハイライト表示    
+                    if self.timeline_display_manager:    
                         self.timeline_display_manager.set_highlighted_interval(new_interval)
 
     def handle_time_position_changed(self, time: float):  
