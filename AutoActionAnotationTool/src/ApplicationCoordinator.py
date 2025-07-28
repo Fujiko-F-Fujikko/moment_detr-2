@@ -271,20 +271,11 @@ class ApplicationCoordinator(QObject):
         if self.main_window and hasattr(self.main_window, 'undo_stack') and self.command_factory:  
             old_start = getattr(self.main_window, 'drag_original_start', interval.start_time)  
             old_end = getattr(self.main_window, 'drag_original_end', interval.end_time)  
-            
-            # ステップかアクションかを判定してファクトリー経由でコマンドを作成  
-            if (hasattr(interval, 'query_result') and   
-                hasattr(interval.query_result, 'query_text') and   
-                interval.query_result.query_text.startswith("Step:")):  
-                
-                self.command_factory.create_and_execute_step_modify(  
-                    interval, old_start, old_end, new_start, new_end,  
-                    self.results_data_controller, self.video_data_controller.get_video_name()  
-                )  
-            else:  
-                self.command_factory.create_and_execute_interval_modify(  
-                    interval, old_start, old_end, new_start, new_end  
-                )
+              
+            # 統一されたIntervalEditCommandを使用  
+            self.command_factory.create_and_execute_interval_modify(  
+                interval, old_start, old_end, new_start, new_end  
+            )
     
     def handle_new_interval_created(self, start_time: float, end_time: float, timeline_type: str):  
         """新規区間作成時の処理"""  
