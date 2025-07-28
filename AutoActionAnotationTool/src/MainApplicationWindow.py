@@ -1,63 +1,65 @@
-# MainApplicationWindow.py (リファクタリング版)  
-import sys  
-import argparse  
+# MainApplicationWindow.py (リファクタリング版)    
+import sys    
+import argparse    
+from datetime import datetime  
+import os  
+    
+from PyQt6.QtWidgets import QMainWindow, QApplication  
+from PyQt6.QtGui import QAction, QUndoStack, QKeySequence, QShortcut    
+from PyQt6.QtCore import Qt    
+    
+from ApplicationCoordinator import ApplicationCoordinator    
+from TimelineDisplayManager import TimelineDisplayManager    
+from EditWidgetManager import EditWidgetManager    
+from LayoutOrchestrator import LayoutOrchestrator    
+from VideoPlayerController import VideoPlayerController    
+from FileManager import FileManager    
+from ResultsDisplayManager import ResultsDisplayManager  
+from Utilities import show_call_stack  # デバッグ用スタックトレース表示  
+    
+class MainApplicationWindow(QMainWindow):    
+    """UIの初期化とメニュー設定に特化したメインウィンドウクラス"""    
+        
+    def __init__(self):    
+        super().__init__()    
+        self.setWindowTitle("Moment-DETR Video Annotation Viewer")    
+        self.setGeometry(100, 100, 1600, 1000)    
+            
+        # Undo/Redoスタックを初期化    
+        self.undo_stack = QUndoStack(self)    
+            
+        # コアコンポーネントを初期化    
+        self.application_coordinator = ApplicationCoordinator(self)    
+        self.timeline_display_manager = TimelineDisplayManager()    
+        self.edit_widget_manager = EditWidgetManager(self)    
+        self.layout_orchestrator = LayoutOrchestrator(self)    
+        self.video_controller = VideoPlayerController()    
+        self.file_manager = FileManager()    
+        self.results_display_manager = ResultsDisplayManager(self.application_coordinator.get_results_data_controller())  
+            
+        # UIを設定    
+        self.setup_ui()    
   
-from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QDialog  
-from PyQt6.QtGui import QAction, QUndoStack, QKeySequence, QShortcut  
-from PyQt6.QtCore import Qt  
-  
-from ApplicationCoordinator import ApplicationCoordinator  
-from TimelineDisplayManager import TimelineDisplayManager  
-from EditWidgetManager import EditWidgetManager  
-from LayoutOrchestrator import LayoutOrchestrator  
-from VideoPlayerController import VideoPlayerController  
-from FileManager import FileManager  
-from ResultsDisplayManager import ResultsDisplayManager
-from Utilities import show_call_stack  # デバッグ用スタックトレース表示
-  
-class MainApplicationWindow(QMainWindow):  
-    """UIの初期化とメニュー設定に特化したメインウィンドウクラス"""  
-      
-    def __init__(self):  
-        super().__init__()  
-        self.setWindowTitle("Moment-DETR Video Annotation Viewer")  
-        self.setGeometry(100, 100, 1600, 1000)  
-          
-        # Undo/Redoスタックを初期化  
-        self.undo_stack = QUndoStack(self)  
-          
-        # コアコンポーネントを初期化  
-        self.application_coordinator = ApplicationCoordinator(self)  
-        self.timeline_display_manager = TimelineDisplayManager()  
-        self.edit_widget_manager = EditWidgetManager(self)  
-        self.layout_orchestrator = LayoutOrchestrator(self)  
-        self.video_controller = VideoPlayerController()  
-        self.file_manager = FileManager()  
-        self.results_display_manager = ResultsDisplayManager(self.application_coordinator.get_results_data_controller())
-          
-        # UIを設定  
-        self.setup_ui()  
+        # コンポーネント間の接続を設定    
+        self.coordinate_components()    
+            
+        self.setup_connections()    
+        self.setup_menus()    
+        
+    def coordinate_components(self):    
+        """各コーディネーターへの委譲"""    
+        # ApplicationCoordinatorにUI管理コンポーネントを設定    
+        self.application_coordinator.set_ui_components(    
+            self.timeline_display_manager,    
+            self.edit_widget_manager,    
+            self.video_controller,  
+            self.results_display_manager  
+        )    
+            
+        # EditWidgetManagerにResultsDataControllerを設定（STTDataController削除）  
+        results_controller = self.application_coordinator.get_results_data_controller()    
+        self.edit_widget_manager.set_results_data_manager(results_controller) 
 
-        # コンポーネント間の接続を設定  
-        self.coordinate_components()  
-          
-        self.setup_connections()  
-        self.setup_menus()  
-      
-    def coordinate_components(self):  
-        """各コーディネーターへの委譲"""  
-        # ApplicationCoordinatorにUI管理コンポーネントを設定  
-        self.application_coordinator.set_ui_components(  
-            self.timeline_display_manager,  
-            self.edit_widget_manager,  
-            self.video_controller,
-            self.results_display_manager
-        )  
-          
-        # EditWidgetManagerにSTTDataControllerを設定  
-        stt_controller = self.application_coordinator.get_stt_data_controller()  
-        self.edit_widget_manager.set_stt_data_manager(stt_controller)  
-      
     def setup_ui(self):  
         """UIレイアウトの初期化"""  
         # 動画ウィジェットとコントロールを取得  
@@ -107,7 +109,8 @@ class MainApplicationWindow(QMainWindow):
         self.file_manager.videoLoaded.connect(self.load_video_from_path)  
         self.file_manager.resultsLoaded.connect(self.load_inference_results_from_path)  
         self.file_manager.resultsSaved.connect(self.on_results_saved)  
-          
+        self.file_manager.sttDatasetExported.connect(self.on_stt_dataset_exported)  
+
         # フィルタコントロールの接続  
         if hasattr(self, 'confidence_slider'):  
             self.confidence_slider.valueChanged.connect(self.update_confidence_filter)  
@@ -276,7 +279,11 @@ class MainApplicationWindow(QMainWindow):
     def on_results_saved(self, file_path: str):  
         """結果保存完了時の処理"""  
         self.file_manager.show_save_success_message(file_path, self)  
-      
+
+    def on_stt_dataset_exported(self, file_path: str):  
+        """STTデータセットエクスポート完了時の処理"""  
+        self.file_manager.show_save_success_message(file_path, self)  
+
     # ファイル操作（ApplicationCoordinatorに委譲）  
     def load_video_from_path(self, video_path: str):  
         """動画読み込み"""  
@@ -293,42 +300,43 @@ class MainApplicationWindow(QMainWindow):
             self.file_manager.show_no_results_warning(self)  
             return  
           
-        file_path = self.file_manager.save_results_dialog(self)  
+        # 動画ファイル名とタイムスタンプを含むファイル名を生成  
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # ファイル名（拡張子付き）
+        basename = os.path.basename(self.application_coordinator.current_video_path)
+        # ファイル名（拡張子なし）
+        stemname = os.path.splitext(basename)[0]        
+        default_filename = f"{stemname}_{timestamp}.moment-dtr.json"
+
+        file_path = self.file_manager.save_results_dialog(self, default_filename)  
         if file_path:  
             try:  
                 results_controller.save_results(file_path)  
-                self.file_manager.show_save_success_message(file_path, self)  
             except Exception as e:  
                 self.file_manager.show_save_error_message(str(e), self)  
       
-    def export_stt_dataset(self):  
-        """STTデータセットエクスポート"""  
-        stt_controller = self.application_coordinator.get_stt_data_controller()  
-        dataset_info = stt_controller.get_dataset_info()  
-          
-        if dataset_info['total_videos'] == 0:  
-            QMessageBox.warning(self, "Warning", "No video data to export.")  
-            return  
-          
-        # エクスポートダイアログを表示  
-        from STTExportDialog import STTExportDialog  
-        dialog = STTExportDialog(dataset_info['videos'], self)  
-          
-        if dialog.exec() == QDialog.DialogCode.Accepted:  
-            subset_settings = dialog.get_subset_settings()  
-            for video_name, subset in subset_settings.items():  
-                stt_controller.update_video_subset(video_name, subset)  
-              
-            file_path, _ = QFileDialog.getSaveFileName(  
-                self, "Export STT Dataset", "stt_dataset.json", "JSON Files (*.json)"  
-            )  
-              
-            if file_path:  
-                try:  
-                    stt_controller.export_to_json(file_path)  
-                    QMessageBox.information(self, "Success", f"STT Dataset exported to {file_path}")  
-                except Exception as e:  
-                    QMessageBox.critical(self, "Error", f"Failed to export STT Dataset: {str(e)}")  
+    def export_stt_dataset(self):    
+        """STTデータセットエクスポート"""    
+        results_controller = self.application_coordinator.get_results_data_controller()    
+        if not results_controller.is_results_loaded():    
+            self.file_manager.show_no_results_warning(self)    
+            return    
+            
+        # 動画ファイル名とタイムスタンプを含むファイル名を生成    
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  
+        basename = os.path.basename(self.application_coordinator.current_video_path)  
+        stemname = os.path.splitext(basename)[0]          
+        default_filename = f"{stemname}_{timestamp}.stt.json"  
+  
+        file_path = self.file_manager.export_stt_dataset_dialog(self, default_filename)    
+  
+        if file_path:    
+            try:    
+                # STTデータ形式に変換してエクスポート  
+                stt_data = results_controller.convert_to_stt_format()  
+                results_controller.export_stt_data(file_path, stt_data)  
+            except Exception as e:    
+                self.file_manager.show_save_error_message(str(e), self)  
       
     # フィルタ操作（ApplicationCoordinatorに委譲）  
     def update_confidence_filter(self, value: int):  
