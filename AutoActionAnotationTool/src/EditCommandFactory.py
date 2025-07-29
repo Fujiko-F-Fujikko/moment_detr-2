@@ -1,7 +1,7 @@
 # EditCommandFactory.py (修正版)  
 from DataClasses import QueryResults, DetectionInterval  
 from IntervalEditCommand import IntervalEditCommand, IntervalDeleteCommand, IntervalAddCommand
-from ActionEditCommand import ActionDetailModifyCommand  
+from ActionEditCommand import ActionDetailModifyCommand, StepTextModifyCommand
 
   
 class EditCommandFactory:  
@@ -90,10 +90,34 @@ class EditCommandFactory:
         """ステップ用QueryResult削除コマンドを作成・実行"""  
         results_controller.remove_step_query_result(query_result)  
       
-    def create_and_execute_step_text_modify(self, query_result, old_text, new_text):  
-        """ステップテキスト修正コマンドを作成・実行"""  
-        command = ActionDetailModifyCommand(  
-            query_result, old_text, new_text, self.main_window  
+    def create_step_text_modify_command(self, query_result: QueryResults,  
+                                          old_query_text: str, new_query_text: str,  
+                                          description: str = "Modify Action Details") -> ActionDetailModifyCommand:  
+        """ステップテキスト変更コマンドを作成"""  
+        # ApplicationCoordinatorからResultsDataControllerを取得  
+        results_data_controller = None  
+        if hasattr(self.main_window, 'application_coordinator'):  
+            results_data_controller = self.main_window.application_coordinator.results_data_controller  
+
+        return StepTextModifyCommand(  
+            query_result, old_query_text, new_query_text,   
+            results_data_controller, self.main_window  
         )  
+
+    def create_and_execute_step_text_modify(self, query_result, old_query_text, new_query_text):  
+        """Step用テキスト変更コマンドを作成・実行"""  
+        print(f"[DEBUG] create_and_execute_step_text_modify called")  
+        print(f"[DEBUG] query_result: {query_result}")  
+        print(f"[DEBUG] old_query_text: '{old_query_text}'")  
+        print(f"[DEBUG] new_query_text: '{new_query_text}'")  
+          
+        command = self.create_step_text_modify_command(  
+            query_result, old_query_text, new_query_text  
+        )
+        print(f"[DEBUG] Command created: {command}")  
+          
         if self.main_window and hasattr(self.main_window, 'undo_stack'):  
-            self.main_window.undo_stack.push(command)
+            self.main_window.undo_stack.push(command)  
+            print(f"[DEBUG] Command pushed to undo_stack")  
+        else:  
+            print(f"[DEBUG] ERROR: Cannot push command - no undo_stack")

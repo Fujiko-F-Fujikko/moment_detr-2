@@ -147,26 +147,15 @@ class StepEditor(QWidget):
         self.refresh_step_list()  
       
     def _load_step_data(self):  
-        print(f"[DEBUG] _load_step_data called")  
-        if not self.results_data_controller:  
+        if self.results_data_controller is None:  
             print(f"[DEBUG] ERROR: results_data_controller is None in _load_step_data!")  
             return  
           
         all_results = self.results_data_controller.get_filtered_results()  
-        print(f"[DEBUG] Got {len(all_results)} filtered results")  
-          
+         
         self.step_query_results = [qr for qr in all_results if qr.query_text.startswith("Step:")]  
-        print(f"[DEBUG] Found {len(self.step_query_results)} step query results")  
-        for i, qr in enumerate(self.step_query_results):  
-            print(f"[DEBUG] Step {i}: {qr.query_text}")      
 
-    def refresh_step_list(self):  
-        print(f"[DEBUG] refresh_step_list called")  
-        print(f"[DEBUG] step_list is None: {self.step_list is None}")  
-        print(f"[DEBUG] step_list bool: {bool(self.step_list)}")  
-        print(f"[DEBUG] results_data_controller is None: {self.results_data_controller is None}")  
-        print(f"[DEBUG] results_data_controller bool: {bool(self.results_data_controller)}")  
-          
+    def refresh_step_list(self):            
         if self.step_list is None:  
             print(f"[DEBUG] ERROR: step_list is None!")  
             return  
@@ -176,16 +165,12 @@ class StepEditor(QWidget):
           
         self.step_list.clear()  
         step_query_results = self.get_step_query_results()  
-        print(f"[DEBUG] refresh_step_list: got {len(step_query_results)} step results")  
           
         for i, query_result in enumerate(step_query_results):  
             step_text = query_result.query_text.replace("Step:", "").strip()  
-            print(f"[DEBUG] Adding list item {i}: {step_text}")  
             item = QListWidgetItem(step_text)  
             item.setData(1, i)  
             self.step_list.addItem(item)  
-      
-        print(f"[DEBUG] Final step_list count: {self.step_list.count()}")
       
     def on_step_selected(self, item: QListWidgetItem):  
         """ステップ選択時の処理"""  
@@ -233,17 +218,16 @@ class StepEditor(QWidget):
       
     def add_step(self, query_result: Optional[QueryResults] = None, start_time: Optional[float] = None, end_time: Optional[float] = None):  
         """新しいステップを追加"""  
-        print(f"[DEBUG] StepEditor.add_step called: query_result={query_result}, start={start_time}, end={end_time}")
-        if not self.results_data_controller:  
+        if self.results_data_controller is None:  
             print(f"[DEBUG] ERROR: results_data_controller is None!")  
             return  
           
         if query_result is None:  
             # ボタンクリック時のデフォルト処理  
-            if not self.step_text_edit:  
+            if self.step_text_edit is None:  
                 return  
             step_text = self.step_text_edit.text().strip()  
-            if not step_text:  
+            if step_text is None:  
                 return  
                   
             # 新しいQueryResultを作成  
@@ -278,14 +262,9 @@ class StepEditor(QWidget):
         default_interval.query_result = query_result  
         query_result.relevant_windows.append(default_interval)  
           
-        # ResultsDataControllerに追加  
-        if self.command_factory:  
-            print(f"[DEBUG] Executing command via command_factory")  
-            self.command_factory.create_and_execute_step_add_query_result(  
-                self.results_data_controller, query_result  
-            )  
-        else:  
-            print(f"[DEBUG] ERROR: command_factory is None!")
+        self.command_factory.create_and_execute_step_add_query_result(  
+            self.results_data_controller, query_result  
+        )  
           
         self._load_step_data()  
         self.refresh_step_list()  
@@ -294,13 +273,15 @@ class StepEditor(QWidget):
         
     def _on_step_text_changed(self):  
         """ステップテキスト変更時の処理（遅延実行）"""  
+        print(f"[DEBUG] _on_step_text_changed called, new text: {self.step_edit_text.text()}")  
         if self._step_timer is None:  
             self._step_timer = QTimer()  
             self._step_timer.timeout.connect(self.apply_step_changes)  
           
         self._step_timer.stop()  
         self._step_timer.setSingleShot(True)  
-        self._step_timer.start(500)  # 500ms後に実行  
+        self._step_timer.start(500)  
+        print(f"[DEBUG] Timer started for 500ms")
       
     def _on_segment_changed(self):  
         """セグメント変更時の処理（遅延実行）"""  
@@ -308,67 +289,107 @@ class StepEditor(QWidget):
       
     def apply_step_changes(self):  
         """ステップ変更を適用"""  
+        print(f"[DEBUG] apply_step_changes called")  
         current_item = self.step_list.currentItem()  
-        if current_item is None or self.results_data_controller is None or self.command_factory is None:  
+        if current_item is None:  
+            print(f"[DEBUG] ERROR: current_item is None")  
             return  
-          
+        if self.results_data_controller is None:  
+            print(f"[DEBUG] ERROR: results_data_controller is None")  
+            return  
+        if self.command_factory is None:  
+            print(f"[DEBUG] ERROR: command_factory is None")  
+            return  
+      
         index = current_item.data(1)  
+        print(f"[DEBUG] Selected item index: {index}")  
+      
         if index >= len(self.step_query_results):  
+            print(f"[DEBUG] ERROR: index {index} >= step_query_results length {len(self.step_query_results)}")  
             return  
-          
+      
         query_result = self.step_query_results[index]  
         old_text = query_result.query_text.replace("Step:", "").strip()  
         new_text = self.step_edit_text.text()  
-          
+      
+        print(f"[DEBUG] Text comparison - old: '{old_text}', new: '{new_text}'")  
+        print(f"[DEBUG] Text changed: {old_text != new_text}")  
+      
         # 時間変更の確認  
         time_changed = False  
         old_start = 0.0  
         old_end = 0.0  
         new_start = self.step_start_spin.value()  
         new_end = self.step_end_spin.value()  
-          
+      
         if query_result.relevant_windows:  
             interval = query_result.relevant_windows[0]  
             old_start = interval.start_time  
             old_end = interval.end_time  
             time_changed = (abs(old_start - new_start) > 0.01 or abs(old_end - new_end) > 0.01)  
-          
+      
+        print(f"[DEBUG] Time comparison - old: start={old_start}, end={old_end}")  
+        print(f"[DEBUG] Time comparison - new: start={new_start}, end={new_end}")  
+        print(f"[DEBUG] Time changed: {time_changed}")  
+      
         # テキスト変更の確認  
         text_changed = (old_text != new_text)  
-          
+      
         # 実際に変更があるかチェック  
         if not time_changed and not text_changed:  
+            print(f"[DEBUG] No changes detected, returning early")  
             return  
-          
+      
         # テキスト変更の処理  
         if text_changed:  
             old_query_text = query_result.query_text  
             new_query_text = f"Step:{new_text}"  
-              
+            print(f"[DEBUG] Executing text modify command: '{old_query_text}' -> '{new_query_text}'")  
+      
             if self.command_factory:  
                 self.command_factory.create_and_execute_step_text_modify(  
                     query_result, old_query_text, new_query_text  
                 )  
-          
+                print(f"[DEBUG] Text modify command executed")  
+            else:  
+                print(f"[DEBUG] ERROR: command_factory is None during text modify")  
+      
         # セグメント変更の処理  
         if time_changed and query_result.relevant_windows:  
             interval = query_result.relevant_windows[0]  
-              
+            print(f"[DEBUG] Executing interval modify command: {old_start}->{new_start}, {old_end}->{new_end}")  
+      
             if self.command_factory:  
                 self.command_factory.create_and_execute_interval_modify(  
                     interval, old_start, old_end, new_start, new_end  
                 )  
-          
+                print(f"[DEBUG] Interval modify command executed")  
+            else:  
+                print(f"[DEBUG] ERROR: command_factory is None during interval modify")  
+      
         # 変更があった場合のみUI更新とシグナル発信  
+        print(f"[DEBUG] Starting data refresh...")  
         self._load_step_data()  
+        print(f"[DEBUG] _load_step_data completed, step_query_results count: {len(self.step_query_results)}")  
+      
         self.refresh_step_list()  
+        print(f"[DEBUG] refresh_step_list completed, step_list count: {self.step_list.count()}")  
+      
+        # 更新後のクエリテキストを確認  
+        if index < len(self.step_query_results):  
+            updated_query_result = self.step_query_results[index]  
+            print(f"[DEBUG] Updated query_text: '{updated_query_result.query_text}'")  
+        else:  
+            print(f"[DEBUG] WARNING: index {index} out of range after refresh")  
+      
         self.stepModified.emit()  
-        self.dataChanged.emit()
+        self.dataChanged.emit()  
+        print(f"[DEBUG] Signals emitted")
       
     def delete_step(self):  
         """選択されたステップを削除"""  
         current_item = self.step_list.currentItem()  
-        if not current_item or not self.results_data_controller:  
+        if current_item is None or self.results_data_controller is None:  
             return  
           
         index = current_item.data(1)  
@@ -389,12 +410,12 @@ class StepEditor(QWidget):
       
     def select_step(self, step_text: str = None, step_index: int = None):  
         """指定されたステップを選択"""  
-        if not self.step_list:  
+        if self.step_list is None:  
             return  
           
         for i in range(self.step_list.count()):  
             item = self.step_list.item(i)  
-            if not item:  
+            if item is None:  
                 continue  
                   
             item_index = item.data(1)  
@@ -424,7 +445,7 @@ class StepEditor(QWidget):
       
     def get_step_query_results(self) -> List[QueryResults]:  
         """ステップ用QueryResultsを取得（ResultsDataControllerから）"""  
-        if not self.results_data_controller:  
+        if self.results_data_controller is None:  
             return []  
         return self.results_data_controller.get_step_query_results()  
 
