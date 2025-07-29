@@ -132,7 +132,7 @@ class ActionEditor(QWidget):
                 
             # ボタンクリック    
             # 修正：ラムダ関数を使用して引数なしで呼び出し  
-            self.add_button.clicked.connect(lambda: self.add_new_interval)    
+            self.add_button.clicked.connect(lambda: self.add_new_interval())    
             self.delete_button.clicked.connect(self.delete_interval)    
                 
             self._signals_connected = True    
@@ -428,7 +428,7 @@ class ActionEditor(QWidget):
             calculated_end = end_time    
         else:    
             # デフォルト時間計算    
-            default_duration = 5.0    
+            default_duration = 1.0    
             current_query_result = self.get_current_query_result()    
                 
             if self.selected_interval:    
@@ -455,7 +455,7 @@ class ActionEditor(QWidget):
             return    
             
         # 新しい区間を作成    
-        new_interval = DetectionInterval(calculated_start, calculated_end, 1.0, 0)    
+        new_interval = DetectionInterval(calculated_start, calculated_end, 1.0, 0, query_type="action")    
         new_interval.query_result = query_result    
             
         # ResultsDataControllerに追加    

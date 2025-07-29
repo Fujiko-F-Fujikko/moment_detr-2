@@ -83,12 +83,9 @@ class ResultsDataController(QObject):
     def _apply_current_filters(self):  
         """現在のフィルタ設定を適用"""  
         # Hand Typeフィルタを適用  
-        if self.current_hand_type_filter == "All":  
-            filtered_by_hand_type = self.all_results.copy()  
-        else:  
-            filtered_by_hand_type = self._filter_by_hand_type(  
-                self.all_results, self.current_hand_type_filter  
-            )  
+        filtered_by_hand_type = self._filter_by_hand_type(  
+            self.all_results, self.current_hand_type_filter  
+        )  
           
         # 信頼度フィルタを適用  
         self.filtered_results = self._filter_by_confidence(  
@@ -101,48 +98,61 @@ class ResultsDataController(QObject):
     def _filter_by_hand_type(self, results: List[QueryResults], hand_type: str) -> List[QueryResults]:  
         """Hand Type別にフィルタリング"""  
         if hand_type == "All":  
-            return results  
+            return results.copy()  
           
-        filtered = []  
+        filtered_results = []  
         for result in results:  
+            # フィルタ条件に一致しない場合でも、空のQueryResultsを保持  
+            should_include = False  
+              
             # Stepクエリの場合は特別処理  
             if result.query_text.startswith("Step:"):  
-                if hand_type == "Other":  
-                    filtered.append(result)  
-                continue  
+                should_include = (hand_type == "Other")  
+            else:  
+                try:  
+                    detected_hand_type, _ = QueryParser.validate_and_parse_query(result.query_text)  
+                    should_include = (detected_hand_type == hand_type) or (hand_type == "Other" and detected_hand_type == "None")  
+                except QueryValidationError:  
+                    should_include = (hand_type == "Other")  
               
-            try:  
-                detected_hand_type, _ = QueryParser.validate_and_parse_query(result.query_text)  
-                if detected_hand_type == hand_type:  
-                    filtered.append(result)  
-                elif hand_type == "Other" and detected_hand_type == "None":  
-                    filtered.append(result)  
-            except QueryValidationError:  
-                if hand_type == "Other":  
-                    filtered.append(result)  
-          
-        return filtered  
-      
-    def _filter_by_confidence(self, results: List[QueryResults], threshold: float) -> List[QueryResults]:  
-        """信頼度でフィルタリング"""  
-        filtered = []  
-        for result in results:  
-            filtered_intervals = []  
-            for interval in result.relevant_windows:  
-                if interval.confidence_score >= threshold:  
-                    filtered_intervals.append(interval)  
-              
-            if filtered_intervals:  
-                filtered_result = QueryResults(  
+            # 条件に一致する場合は元のQueryResultsを、一致しない場合は空の区間を持つQueryResultsを作成  
+            if should_include:  
+                filtered_results.append(result)  
+            else:  
+                # 空のQueryResultsを作成して保持  
+                empty_result = QueryResults(  
                     query_text=result.query_text,  
                     video_id=result.video_id,  
-                    relevant_windows=filtered_intervals,  
+                    relevant_windows=[],  # 空のリスト  
                     saliency_scores=result.saliency_scores,  
                     query_id=result.query_id  
                 )  
-                filtered.append(filtered_result)  
+                filtered_results.append(empty_result)  
           
-        return filtered  
+        return filtered_results
+      
+    def _filter_by_confidence(self, results: List[QueryResults], threshold: float) -> List[QueryResults]:    
+        """信頼度でフィルタリング"""    
+        filtered_results = []    
+        for result in results:    
+            # 信頼度閾値を満たす区間のみを含む新しいQueryResultsを作成    
+            filtered_intervals = [    
+                interval for interval in result.relevant_windows    
+                if interval.confidence_score >= threshold    
+            ]    
+              
+            # 新しいQueryResultsオブジェクトを作成（video_idを追加）    
+            # 信頼度閾値を満たす区間がない場合でも、空のQueryResultsを保持  
+            filtered_result = QueryResults(    
+                query_text=result.query_text,    
+                video_id=result.video_id,  
+                relevant_windows=filtered_intervals, # 空のリストでも保持  
+                saliency_scores=result.saliency_scores,    
+                query_id=result.query_id    
+            )    
+            filtered_results.append(filtered_result)    
+          
+        return filtered_results
       
     # === ステップ管理機能 ===  
       
