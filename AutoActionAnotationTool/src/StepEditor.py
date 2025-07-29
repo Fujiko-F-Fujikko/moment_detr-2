@@ -7,6 +7,7 @@ from typing import Optional, List
   
 from DataClasses import QueryResults, DetectionInterval
 from EditCommandFactory import EditCommandFactory  
+from ResultsDataController import ResultsDataController
 from Utilities import show_call_stack  
   
 class StepEditor(QWidget):  
@@ -21,10 +22,9 @@ class StepEditor(QWidget):
     def __init__(self, main_window=None):  
         super().__init__()  
         self.main_window = main_window  
-        self.command_factory = EditCommandFactory(main_window) if main_window else None  
-        self.results_data_manager = None  
+        self.command_factory = EditCommandFactory(main_window) if main_window else None
+        self.results_data_controller = None  
         self.current_video_name: Optional[str] = None  
-        self.current_query_result: Optional[QueryResults] = None  
         self.step_query_results: List[QueryResults] = []  # ステップ用のQueryResults  
           
         # UI要素  
@@ -122,8 +122,9 @@ class StepEditor(QWidget):
     def _connect_signals(self):  
         """シグナル接続の設定"""  
         if self.add_step_btn:  
-            self.add_step_btn.clicked.connect(self.add_step)  
-          
+            # 修正：ラムダ関数を使用して引数なしで呼び出し  
+            self.add_step_btn.clicked.connect(lambda: self.add_step())
+
         if self.step_list:  
             self.step_list.itemClicked.connect(self.on_step_selected)  
           
@@ -140,9 +141,9 @@ class StepEditor(QWidget):
         if self.step_end_spin:  
             self.step_end_spin.valueChanged.connect(self._on_segment_changed)  
       
-    def set_results_data_manager(self, results_manager):  
-        """ResultsDataManagerを設定"""  
-        self.results_data_manager = results_manager  
+    def set_results_data_controller(self, controller: ResultsDataController):  
+        """ResultsDataControllerを設定"""  
+        self.results_data_controller = controller 
         self._load_step_data()  
       
     def set_current_video(self, video_name: str):  
@@ -153,28 +154,28 @@ class StepEditor(QWidget):
       
     def _load_step_data(self):  
         """ResultsDataControllerからステップデータを読み込み"""  
-        if not self.results_data_manager:  
+        if not self.results_data_controller:  
             return  
           
         # ステップ用のQueryResultsを取得（"Step:"で始まるクエリ）  
-        all_results = self.results_data_manager.get_filtered_results()  
+        all_results = self.results_data_controller.get_filtered_results()  
         self.step_query_results = [  
             qr for qr in all_results   
             if qr.query_text.startswith("Step:")  
         ]  
       
     def refresh_step_list(self):  
-        """ステップリストを更新"""  
-        if not self.step_list:  
+        """修正版：ResultsDataControllerから取得"""  
+        if not self.step_list or not self.results_data_controller:  
             return  
-          
+              
         self.step_list.clear()  
           
-        for i, query_result in enumerate(self.step_query_results):  
-            # "Step:"プレフィックスを除去してステップテキストを取得  
+        step_query_results = self.get_step_query_results()  
+        for i, query_result in enumerate(step_query_results):  
             step_text = query_result.query_text.replace("Step:", "").strip()  
             item = QListWidgetItem(step_text)  
-            item.setData(1, i)  # インデックスを保存  
+            item.setData(1, i)  
             self.step_list.addItem(item)  
       
     def on_step_selected(self, item: QListWidgetItem):  
@@ -221,46 +222,60 @@ class StepEditor(QWidget):
             if widget:  
                 widget.blockSignals(block)  
       
-    def add_step(self):  
+    def add_step(self, query_result: Optional[QueryResults] = None, start_time: Optional[float] = None, end_time: Optional[float] = None):  
         """新しいステップを追加"""  
-        if not self.step_text_edit or not self.results_data_manager:  
+        if not self.results_data_controller:  
             return  
           
-        step_text = self.step_text_edit.text().strip()  
-        if not step_text:  
-            return  
+        if query_result is None:  
+            # ボタンクリック時のデフォルト処理  
+            if not self.step_text_edit:  
+                return  
+            step_text = self.step_text_edit.text().strip()  
+            if not step_text:  
+                return  
+                  
+            # 新しいQueryResultを作成  
+            query_result = QueryResults(  
+                query_text=f"Step:{step_text}",  
+                video_id=self.current_video_name or "unknown",  
+                relevant_windows=[],  
+                saliency_scores=[],  
+                query_id=len(self.step_query_results)  
+            )  
+              
+            self.step_text_edit.clear()  
           
-        # 新しいQueryResultを作成  
-        new_query_result = QueryResults(  
-            query_text=f"Step:{step_text}",  
-            video_id=self.current_video_name or "unknown",  
-            relevant_windows=[],  
-            saliency_scores=[],  
-            query_id=len(self.step_query_results)  
-        )  
+        # 時間設定  
+        if start_time is not None and end_time is not None:  
+            calculated_start = start_time  
+            calculated_end = end_time  
+        else:  
+            calculated_start = 0.0  
+            calculated_end = 1.0  
           
         # デフォルトの区間を作成  
+        print(f"query_result: {query_result}, type: {type(query_result)}")
         default_interval = DetectionInterval(  
-            start_time=0.0,  
-            end_time=1.0,  
+            start_time=calculated_start,  
+            end_time=calculated_end,  
             confidence_score=1.0,  
-            query_id=new_query_result.query_id  
+            query_id=query_result.query_id
         )  
-        default_interval.query_result = new_query_result  
-        new_query_result.relevant_windows.append(default_interval)  
+        default_interval.query_result = query_result  
+        query_result.relevant_windows.append(default_interval)  
           
         # ResultsDataControllerに追加  
         if self.command_factory:  
             self.command_factory.create_and_execute_step_add_query_result(  
-                self.results_data_manager, new_query_result  
+                self.results_data_controller, query_result  
             )  
           
-        self.step_text_edit.clear()  
         self._load_step_data()  
         self.refresh_step_list()  
         self.stepAdded.emit()  
-        self.dataChanged.emit()  
-      
+        self.dataChanged.emit()
+        
     def _on_step_text_changed(self):  
         """ステップテキスト変更時の処理（遅延実行）"""  
         if not self._step_timer:  
@@ -278,7 +293,7 @@ class StepEditor(QWidget):
     def apply_step_changes(self):  
         """ステップ変更を適用"""  
         current_item = self.step_list.currentItem()  
-        if not current_item or not self.results_data_manager or not self.command_factory:  
+        if not current_item or not self.results_data_controller or not self.command_factory:  
             return  
           
         index = current_item.data(1)  
@@ -321,7 +336,7 @@ class StepEditor(QWidget):
     def delete_step(self):  
         """選択されたステップを削除"""  
         current_item = self.step_list.currentItem()  
-        if not current_item or not self.results_data_manager:  
+        if not current_item or not self.results_data_controller:  
             return  
           
         index = current_item.data(1)  
@@ -332,7 +347,7 @@ class StepEditor(QWidget):
           
         if self.command_factory:  
             self.command_factory.create_and_execute_step_delete_query_result(  
-                self.results_data_manager, query_result  
+                self.results_data_controller, query_result  
             )  
           
         self._load_step_data()  
@@ -366,10 +381,6 @@ class StepEditor(QWidget):
                 self.on_step_selected(item)  
                 break  
       
-    def set_current_query_results(self, query_result: QueryResults):  
-        """現在のクエリ結果を設定"""  
-        self.current_query_result = query_result  
-      
     def update_interval_realtime(self, new_start: float, new_end: float):  
         """ドラッグ中のリアルタイム更新"""  
         self._block_signals(True)  
@@ -378,3 +389,17 @@ class StepEditor(QWidget):
             self.step_end_spin.setValue(new_end)  
         finally:  
             self._block_signals(False)
+      
+    def get_step_query_results(self) -> List[QueryResults]:  
+        """ステップ用QueryResultsを取得（ResultsDataControllerから）"""  
+        if not self.results_data_controller:  
+            return []  
+        return self.results_data_controller.get_step_query_results()  
+
+    def set_current_query_results(self, query_result: QueryResults):  
+        """現在のクエリ結果を設定（ResultsDataController設計に対応）"""  
+        # Step用のQueryResultの場合のみ処理  
+        if query_result and query_result.query_text.startswith("Step:"):  
+            # 該当するステップを選択状態にする  
+            step_text = query_result.query_text.replace("Step:", "").strip()  
+            self.select_step(step_text=step_text)
